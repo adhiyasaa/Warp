@@ -7,45 +7,45 @@ const Button = (props) => <button {...props} style={{ padding: '10px', cursor: '
 const Input = (props) => <input {...props} style={{ display: 'block', width: '95%', padding: '8px', border: '1px solid #ccc', borderRadius: '5px' }} />;
 const Textarea = (props) => <textarea {...props} style={{ display: 'block', width: '95%', height: '100px', padding: '8px', border: '1px solid #ccc', borderRadius: '5px' }} />;
 
-export default function ReportPage() {
-  // --- PERUBAHAN 1: Menambah state baru untuk judul dan tanggal ---
-  const [title, setTitle] = useState('');
-  // Mengisi tanggal hari ini secara otomatis
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+const labelDictionary = {
+  'Jalan': 'Jalan Rusak / Berlubang',
+  'Halte': 'Halte Rusak',
+  'Trotoar': 'Trotoar Rusak',
+  'Lampu': 'Lampu Rusak / Mati',
+  'Parit': 'Parit Tersumbat',
+  'Rambu': 'Rambu Rusak'
+};
 
+export default function ReportPage() {
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [description, setDescription] = useState('');
   const [detections, setDetections] = useState([]);
   const [imagePreview, setImagePreview] = useState(null);
 
   const handleFileChange = async (event) => {
+    // ... (Fungsi ini tidak perlu diubah)
     const file = event.target.files?.[0];
     if (!file) return;
-
     setImagePreview(URL.createObjectURL(file));
     setIsAnalyzing(true);
     setDetections([]);
     setDescription('');
-
     const formData = new FormData();
     formData.append('image', file);
-
     try {
       const response = await fetch('http://localhost:8000/api/analyze', {
         method: 'POST',
         body: formData,
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Analisis gagal');
       }
-
       const data = await response.json();
-      
       setDescription(data.description);
       setDetections(data.detections);
-
     } catch (error) {
       console.error(error);
       alert('Error: ' + error.message);
@@ -55,9 +55,8 @@ export default function ReportPage() {
   };
 
   const handleSubmit = (event) => {
+    // ... (Fungsi ini tidak perlu diubah)
     event.preventDefault();
-    // Nantinya, Anda bisa mengirim semua data ini ke Supabase:
-    // title, date, description, detections, dan URL gambar
     alert('Laporan berhasil dikirim! (Simulasi)');
   };
 
@@ -67,7 +66,7 @@ export default function ReportPage() {
       
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* --- PERUBAHAN 2: Menambah elemen form untuk Judul dan Tanggal --- */}
+        {/* Bagian Judul dan Tanggal tidak berubah */}
         <div>
           <h3>Judul Laporan</h3>
           <Input 
@@ -78,7 +77,6 @@ export default function ReportPage() {
             required 
           />
         </div>
-
         <div>
           <h3>Tanggal Laporan</h3>
           <Input 
@@ -88,8 +86,8 @@ export default function ReportPage() {
             required
           />
         </div>
-        {/* ---------------------------------------------------------------- */}
 
+        {/* Bagian Unggah Foto tidak berubah */}
         <div>
           <h3>Unggah Foto</h3>
           <Input id="image-upload" type="file" accept="image/*" onChange={handleFileChange} />
@@ -102,13 +100,20 @@ export default function ReportPage() {
           <p><strong>Objek Terdeteksi:</strong></p>
           {detections.length > 0 ? (
             <ul>
-              {detections.map((item, index) => <li key={index}>{item}</li>)}
+              {/* --- PERUBAHAN DI SINI --- */}
+              {detections.map((item, index) => (
+                <li key={index}>
+                  {labelDictionary[item] || item}
+                </li>
+              ))}
+              {/* ------------------------- */}
             </ul>
           ) : (
             <p>{!isAnalyzing && "Belum ada objek terdeteksi."}</p>
           )}
         </div>
         
+        {/* Sisa form tidak berubah */}
         <div>
           <h3>Deskripsi Otomatis (dari Gen AI)</h3>
           <Textarea 
