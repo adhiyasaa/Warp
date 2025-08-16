@@ -10,13 +10,9 @@ const FeatureCard = ({ iconSrc, title, description, index }) => (
     </div>
     <h3 className="text-2xl font-bold mb-4 text-blue-100">{title}</h3>
     <p className="text-gray-300 leading-relaxed">{description}</p>
-    <div className="mt-4 text-blue-300 font-medium flex items-center">
-      Langkah {index + 1}
-      <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
+
     </div>
-  </div>
+
 );
 
 const Features = () => {
@@ -72,7 +68,7 @@ const Features = () => {
           <h2 className="text-4xl font-bold text-center mb-6">
             Laporan Terbaru dari Masyarakat
           </h2>
-          <p className="text-xl text-blue-200 text-center max-w-3xl mx-auto mb-12">
+          <p className="text-xl text-blue-200 text-center max-w-3xl mx-auto ">
             Lihat berbagai masalah yang telah dilaporkan dan status penanganannya
           </p>
         </div>
