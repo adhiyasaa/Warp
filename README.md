@@ -1,4 +1,4 @@
-# Cara Menjalankan Proyek Lapor Cepat
+# Cara Menjalankan Proyek Warp
 
 Panduan ini berisi langkah-langkah untuk menyiapkan dan menjalankan seluruh aplikasi (Frontend, Backend Utama, dan Backend AI) di komputer lokal Anda.
 
