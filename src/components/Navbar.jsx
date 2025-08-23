@@ -55,9 +55,14 @@ const Navbar = () => {
             <div className="container mx-auto px-6 py-3">
                 <div className="flex justify-between items-center">
                     <Link to="/" className="flex items-center">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="text-3xl font-bold text-white font-serif hover:text-cyan-400 transition-colors">
-                            LaporCepat
-                        </motion.div>
+                        <motion.img
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                            src="/images/logo-desc.png" 
+                            alt="LaporCepat Logo"
+                            className="h-16 w-auto" 
+                        />
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -74,6 +79,9 @@ const Navbar = () => {
                             {reportDropdownOpen && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-[#001722] rounded-md shadow-lg border border-cyan-400/20">
                                     <Link to="/semua-laporan" className="block px-4 py-3 text-white hover:bg-cyan-900/50 rounded-t-md">Laporan Terkini</Link>
+                                    {currentUser && (
+                                        <Link to="/laporan-saya" className="block px-4 py-3 text-white hover:bg-cyan-900/50 rounded-b-md">Laporan Saya</Link>
+                                    )}
                                 </motion.div>
                             )}
                         </div>
