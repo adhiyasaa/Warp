@@ -4,6 +4,8 @@ services:
     build:
       context: . # Menggunakan Dockerfile di root direktori
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL="https://warp-server.up.railway.app"
     container_name: lapor_frontend
     ports:
       - "80:80" # Memetakan port 80 VPS ke port 80 container
