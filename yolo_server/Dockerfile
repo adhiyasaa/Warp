@@ -1,20 +1,17 @@
-# Menggunakan gambar Python 3.11 yang ringan
+# 1. Gunakan image dasar yang ringan
 FROM python:3.11-slim
+
+# 2. Set direktori kerja
 WORKDIR /app
 
-# Menginstal dependensi sistem yang dibutuhkan oleh OpenCV
-RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
-# =======================================================
-
-# Salin file daftar belanja (requirements.txt)
+# 3. Salin HANYA file requirements.txt terlebih dahulu
 COPY requirements.txt .
 
-# Jalankan pip untuk menginstal semua library dari daftar
+# 4. Jalankan instalasi. Langkah ini akan di-cache jika requirements.txt tidak berubah
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Salin semua file dari folder yolo_server ke dalam kontainer
-# (ini termasuk app.py dan model .pt Anda)
+# 5. Salin sisa file proyek Anda
 COPY . .
 
-# Perintah untuk menjalankan server dengan Gunicorn saat kontainer dimulai
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# 6. Perintah untuk menjalankan aplikasi
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app", "--timeout", "300"]
