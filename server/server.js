@@ -33,7 +33,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         // =======================================================
 
         console.log("Mengirim gambar ke server YOLO di port 5000...");
-        const yoloResponse = await fetch('http://server_yolo:5000/predict', {
+        const yoloResponse = await fetch('http://yolo_server:5000/predict', {
             method: 'POST',
             body: formData,
         });

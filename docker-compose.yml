@@ -1,26 +1,32 @@
-version: '3.8' # Menentukan versi Docker Compose
-
-# Mendefinisikan semua layanan/server yang akan kita jalankan
 services:
-  # Layanan untuk backend utama Node.js
-  backend_utama:
-    # Memberitahu Docker untuk membangun image dari Dockerfile di folder ./server
-    build: ./server
-    # Menghubungkan port 8000 di dalam kontainer ke port 8000 di komputer Anda
-    # agar kita bisa mengaksesnya dari luar.
+  # 1. Layanan Frontend (React + Nginx)
+  frontend:
+    build:
+      context: . # Menggunakan Dockerfile di root direktori
+      dockerfile: Dockerfile
+    container_name: lapor_frontend
     ports:
-      - "8000:8000"
-    # Meneruskan API Key dari file .env di folder root ke dalam kontainer ini
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    # Memberitahu bahwa layanan ini bergantung pada server_yolo.
-    # Docker akan memastikan server_yolo jalan terlebih dahulu.
-    depends_on:
-      - server_yolo
+      - "80:80" # Memetakan port 80 VPS ke port 80 container
+    restart: unless-stopped
 
-  # Layanan untuk backend AI Python
-  server_yolo:
-    # Membangun image dari Dockerfile di folder ./yolo_server
-    build: ./yolo_server
-    # Kita tidak perlu 'ports' di sini karena hanya akan diakses
-    # oleh 'backend_utama' secara internal di dalam jaringan Docker.
+  # 2. Layanan Backend Utama (Node.js)
+  server:
+    build: ./server # Membangun dari Dockerfile di dalam folder 'server'
+    container_name: lapor_backend
+    env_file:
+      - ./server/.env # Memuat environment variables dari file .env
+    ports:
+      - "8000:8000" # Ganti port sesuai dengan port aplikasi Node.js Anda
+    restart: unless-stopped
+    depends_on:
+      - yolo_server # Memastikan server AI jalan duluan jika perlu
+
+  # 3. Layanan AI (Python YOLO)
+  yolo_server:
+    build: ./yolo_server # Membangun dari Dockerfile di dalam folder 'yolo_server'
+    container_name: lapor_yolo_server
+    env_file:
+      - ./yolo_server/.env # Memuat environment variables dari file .env
+    ports:
+      - "5000:5000" # Ganti port sesuai dengan port aplikasi Python Anda
+    restart: unless-stopped
