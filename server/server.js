@@ -6,19 +6,24 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
 
-// Tingkatkan batas ukuran payload menjadi 50mb
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const port = process.env.PORT || 8000;
 
-app.use(
-  cors({
-    origin: "https://warp.up.railway.app",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// (DIPERBARUI) Konfigurasi CORS
+const allowedOrigins = ['https://warp.up.railway.app', 'http://localhost:5173']; // Tambahkan localhost untuk development
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Izinkan request tanpa origin (seperti health check internal atau Postman)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+app.use(cors(corsOptions));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -55,7 +60,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const yoloUrl = process.env.YOLO_API_ENDPOINT;
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout 30 detik
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         console.log(`[SERVER LOG] Mengirim permintaan ke YOLO di: ${yoloUrl}`);
         const yoloResponse = await fetch(yoloUrl, {
