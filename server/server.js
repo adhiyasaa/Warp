@@ -35,10 +35,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const imageBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
         formData.append('image', imageBlob, req.file.originalname);
 
-        // (DIPERBARUI) Gunakan hostname dan port dari environment variables.
-        const yoloHostname = process.env.YOLO_SERVER_HOSTNAME || 'yolo-server';
-        const yoloPort = process.env.YOLO_SERVER_PORT || 5000;
-        const yoloUrl = `http://${yoloHostname}:${yoloPort}/predict`;
+        const yoloUrl = `${process.env.YOLO_SERVER_PRIVATE_URL}/predict`;
         
         console.log(`Mengirim gambar ke server YOLO di: ${yoloUrl}`);
         const yoloResponse = await fetch(yoloUrl, {
