@@ -42,7 +42,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const imageBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
         formData.append('image', imageBlob, req.file.originalname);
 
-        const yoloUrl = `${process.env.YOLO_SERVER_PRIVATE_URL}/predict`;
+        const yoloUrl = process.env.YOLO_API_ENDPOINT;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
