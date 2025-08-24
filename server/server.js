@@ -39,7 +39,6 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         });
 
         if (!yoloResponse.ok) {
-            // Coba baca pesan error dari server yolo untuk debugging
             const yoloErrorText = await yoloResponse.text();
             console.error("Error dari server YOLO:", yoloErrorText);
             throw new Error('Server YOLO gagal merespons atau error.');
@@ -49,7 +48,6 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const detectedLabels = yoloData.detections || [];
         console.log("Hasil deteksi dari YOLO:", detectedLabels);
 
-        // Minta deskripsi dari Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const imagePart = await fileToGenerativePart(req.file);
         const prompt = "Anda adalah AI yang membantu melaporkan kerusakan fasilitas umum. Jelaskan kerusakan yang terlihat di gambar ini dalam satu kalimat singkat dan jelas.";
