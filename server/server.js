@@ -12,7 +12,14 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const port = process.env.PORT || 8000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://warp.up.railway.app",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 let genAI;
