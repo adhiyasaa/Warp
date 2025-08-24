@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 6. Perintah untuk menjalankan aplikasi
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app", "--timeout", "300"]
+CMD gunicorn --bind 0.0.0.0:$PORT app:app --timeout 300
