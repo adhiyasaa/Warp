@@ -12,16 +12,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const port = process.env.PORT || 8000;
 
 // (DIPERBARUI) Konfigurasi CORS
-const allowedOrigins = ['https://warp.up.railway.app', 'http://localhost:5173']; // Tambahkan localhost untuk development
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Izinkan request tanpa origin (seperti health check internal atau Postman)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Ambil dari variabel atau fallback ke localhost
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
@@ -40,11 +33,8 @@ app.get('/', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is healthy' });
 });
 
-async function fileToGenerativePart(file) {
-    return {
-        inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype },
-    };
-}
+// ... Sisa kode Anda (fileToGenerativePart, app.post, dll.) tetap sama ...
+// (Salin-tempel sisa kode Anda dari versi sebelumnya ke sini)
 
 app.post('/api/analyze', upload.single('image'), async (req, res) => {
     if (!req.file) {
@@ -103,6 +93,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         res.status(500).json({ error: "Gagal menganalisis gambar." });
     }
 });
+
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Server backend utama berjalan di port ${port}`);
