@@ -10,8 +10,15 @@ const port = process.env.PORT || 8000;
 app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-console.log("✅ Klien Gemini siap.");
+// KOSONGKAN INI DULU
+let genAI; 
+try {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    console.log("✅ Klien Gemini siap.");
+} catch(e) {
+    console.error("❌ Gagal inisialisasi Klien Gemini:", e.message);
+}
+
 
 // Endpoint untuk Health Check Railway
 app.get('/', (req, res) => {
@@ -36,18 +43,16 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         formData.append('image', imageBlob, req.file.originalname);
 
         const yoloUrl = `${process.env.YOLO_SERVER_PRIVATE_URL}/predict`;
-
-        // (BARU) Menambahkan AbortController untuk timeout 30 detik
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); 
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         console.log(`[SERVER LOG] Mengirim permintaan ke YOLO di: ${yoloUrl}`);
         const yoloResponse = await fetch(yoloUrl, {
             method: 'POST',
             body: formData,
-            signal: controller.signal // Menambahkan signal timeout
+            signal: controller.signal
         });
-        clearTimeout(timeoutId); // Hentikan timer timeout jika respons diterima
+        clearTimeout(timeoutId);
 
         console.log(`[SERVER LOG] Menerima respons dari YOLO dengan status: ${yoloResponse.status}`);
 
@@ -61,6 +66,10 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const detectedLabels = yoloData.detections || [];
         console.log("[SERVER LOG] Hasil deteksi dari YOLO:", detectedLabels);
 
+        // (DIPINDAHKAN) Inisialisasi model Gemini di sini
+        if (!genAI) {
+            throw new Error("Klien Gemini tidak terinisialisasi.");
+        }
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const imagePart = await fileToGenerativePart(req.file);
         const prompt = "Anda adalah AI yang membantu melaporkan kerusakan fasilitas umum. Jelaskan kerusakan yang terlihat di gambar ini dalam satu kalimat singkat dan jelas.";
