@@ -10,15 +10,9 @@ const port = process.env.PORT || 8000;
 app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// KOSONGKAN INI DULU
-let genAI; 
-try {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    console.log("✅ Klien Gemini siap.");
-} catch(e) {
-    console.error("❌ Gagal inisialisasi Klien Gemini:", e.message);
-}
-
+// Inisialisasi Gemini dinonaktifkan sementara untuk tes
+console.log("⚠️ Inisialisasi Klien Gemini dinonaktifkan untuk tes.");
+let genAI = null; // Dibuat null agar tidak error
 
 // Endpoint untuk Health Check Railway
 app.get('/', (req, res) => {
@@ -66,16 +60,9 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const detectedLabels = yoloData.detections || [];
         console.log("[SERVER LOG] Hasil deteksi dari YOLO:", detectedLabels);
 
-        // (DIPINDAHKAN) Inisialisasi model Gemini di sini
-        if (!genAI) {
-            throw new Error("Klien Gemini tidak terinisialisasi.");
-        }
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const imagePart = await fileToGenerativePart(req.file);
-        const prompt = "Anda adalah AI yang membantu melaporkan kerusakan fasilitas umum. Jelaskan kerusakan yang terlihat di gambar ini dalam satu kalimat singkat dan jelas.";
-        const result = await model.generateContent([prompt, imagePart]);
-        const description = result.response.text();
-        console.log("[SERVER LOG] Deskripsi dari Gemini:", description);
+        // Bagian Gemini dinonaktifkan dan diganti dengan data dummy
+        const description = "Deskripsi dari Gemini dinonaktifkan sementara.";
+        console.log("[SERVER LOG] Deskripsi dari Gemini dinonaktifkan untuk tes.");
 
         res.json({ detections: detectedLabels, description: description });
 
