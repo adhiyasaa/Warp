@@ -5,13 +5,19 @@ import multer from 'multer';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
-const port = 8000;
+// Gunakan port dari Railway, atau 8000 untuk lokal
+const port = process.env.PORT || 8000;
 
 app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 console.log("✅ Klien Gemini siap.");
+
+// (BARU) Endpoint untuk Health Check Railway
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is healthy' });
+});
 
 async function fileToGenerativePart(file) {
     return {
@@ -25,15 +31,17 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
     }
 
     try {
-        // ================== PERUBAHAN DI SINI ==================
-        // Kita gunakan FormData dan Blob bawaan Node.js yang lebih modern
         const formData = new FormData();
         const imageBlob = new Blob([req.file.buffer], { type: req.file.mimetype });
         formData.append('image', imageBlob, req.file.originalname);
-        // =======================================================
 
-        console.log("Mengirim gambar ke server YOLO di port 5000...");
-        const yoloResponse = await fetch('http://yolo_server:5000/predict', {
+        // (DIPERBARUI) Gunakan hostname dan port dari environment variables
+        const yoloHostname = process.env.YOLO_SERVER_HOSTNAME || 'yolo-server';
+        const yoloPort = process.env.YOLO_SERVER_PORT || 5000;
+        const yoloUrl = `http://${yoloHostname}:${yoloPort}/predict`;
+        
+        console.log(`Mengirim gambar ke server YOLO di: ${yoloUrl}`);
+        const yoloResponse = await fetch(yoloUrl, {
             method: 'POST',
             body: formData,
         });
@@ -63,6 +71,6 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`🚀 Server backend utama berjalan di http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 Server backend utama berjalan di port ${port}`);
 });
