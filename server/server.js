@@ -6,17 +6,19 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
 
+// Tingkatkan batas ukuran payload menjadi 50mb
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const port = process.env.PORT || 8000;
 
-// (DIPERBARUI) Konfigurasi CORS
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Ambil dari variabel atau fallback ke localhost
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: "https://warp.up.railway.app",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -33,8 +35,11 @@ app.get('/', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is healthy' });
 });
 
-// ... Sisa kode Anda (fileToGenerativePart, app.post, dll.) tetap sama ...
-// (Salin-tempel sisa kode Anda dari versi sebelumnya ke sini)
+async function fileToGenerativePart(file) {
+    return {
+        inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype },
+    };
+}
 
 app.post('/api/analyze', upload.single('image'), async (req, res) => {
     if (!req.file) {
@@ -50,7 +55,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const yoloUrl = process.env.YOLO_API_ENDPOINT;
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout 30 detik
 
         console.log(`[SERVER LOG] Mengirim permintaan ke YOLO di: ${yoloUrl}`);
         const yoloResponse = await fetch(yoloUrl, {
@@ -93,7 +98,6 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         res.status(500).json({ error: "Gagal menganalisis gambar." });
     }
 });
-
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`🚀 Server backend utama berjalan di port ${port}`);
