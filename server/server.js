@@ -55,7 +55,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         const yoloUrl = process.env.YOLO_API_ENDPOINT;
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout 30 detik
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout 30 detik
 
         console.log(`[SERVER LOG] Mengirim permintaan ke YOLO di: ${yoloUrl}`);
         const yoloResponse = await fetch(yoloUrl, {
