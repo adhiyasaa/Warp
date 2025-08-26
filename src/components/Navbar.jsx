@@ -56,8 +56,10 @@ const Navbar = () => {
                 <div className="flex justify-between items-center">
                     <Link to="/" className="flex items-center">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="text-3xl font-bold text-white font-serif hover:text-cyan-400 transition-colors">
-                            <img src="/WARP_LOGO.png" alt="" />
+                            <img src="/WARP_LOGO.png" alt="" className='mt-2 w-50 h-10'/>
                         </motion.div>
+
+                        
                     </Link>
 
                     {/* Desktop Navigation */}
