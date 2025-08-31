@@ -1,0 +1,25 @@
+services:
+  # Layanan untuk server AI (Python/YOLO)
+  - type: web
+    name: server-yolo
+    env: docker
+    dockerfilePath: ./backend_yolo/Dockerfile
+    # 'private' berarti tidak bisa diakses dari internet langsung
+    plan: free 
+    disk:
+      name: models
+      mountPath: /app/models
+      sizeGB: 1
+
+  # Layanan untuk backend utama (Node.js)
+  - type: web
+    name: backend-utama
+    env: docker
+    dockerfilePath: ./backend_utama/Dockerfile
+    # 'public' berarti ini yang akan kita akses dari frontend
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        fromSecret: true # Ambil dari Secrets
+      - key: YOLO_SERVER_URL
+        value: "http://server-yolo:5000" # Komunikasi internal antar server

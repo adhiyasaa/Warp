@@ -51,8 +51,9 @@ const Navbar = () => {
     };
 
     return (
-        <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#001722] shadow-lg' : 'bg-gradient-to-b from-black/70 to-transparent'}`}>
-            <div className="container mx-auto px-6 py-3">
+    <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled || mobileMenuOpen ? 'bg-[#001722] shadow-lg' : 'bg-gradient-to-b from-black/70 to-transparent'}`}>
+            {/* CHANGE: Reduced horizontal padding on mobile (px-4) */}
+            <div className="container mx-auto px-4 md:px-6 py-3">
                 <div className="flex justify-between items-center">
                     <Link to="/" className="flex items-center">
                         <motion.img
@@ -61,7 +62,8 @@ const Navbar = () => {
                             transition={{ duration: 0.5 }}
                             src="/images/logo-desc.png" 
                             alt="LaporCepat Logo"
-                            className="h-16 w-auto" 
+                            // CHANGE: Made logo smaller on mobile (h-12) for better spacing
+                            className="h-12 md:h-16 w-auto" 
                         />
                     </Link>
 
@@ -91,7 +93,7 @@ const Navbar = () => {
 
                     {/* Mobile Menu Button */}
                     <div className="md:hidden">
-                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white focus:outline-none">
+                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white focus:outline-none p-2">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 {mobileMenuOpen ? (
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -106,7 +108,7 @@ const Navbar = () => {
                     <div className="hidden md:flex space-x-6 items-center">
                         {currentUser ? (
                             <div className="relative" onMouseEnter={handleProfileMouseEnter} onMouseLeave={handleProfileMouseLeave}>
-                                <div className="flex items-center space-x-3 cursor-pointer p-2">
+                                <div className="flex items-center space-x-3 cursor-pointer p-2 group">
                                     <div className="w-8 h-8 rounded-full bg-[#00293C] flex items-center justify-center text-white font-bold ring-2 ring-transparent group-hover:ring-cyan-400 transition-all">
                                         {profile?.username?.charAt(0).toUpperCase() || currentUser.email.charAt(0).toUpperCase()}
                                     </div>
