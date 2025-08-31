@@ -49,27 +49,24 @@ const Hero = () => {
     }, []);
 
     return (
+        // 👇 PERUBAHAN ADA DI BARIS INI (menambahkan md:items-center)
         <div 
-            // CHANGE: Added min-h-[600px] to prevent content from getting squished on short, wide screens (e.g., landscape mobile)
-            className="relative bg-cover bg-center h-screen min-h-[600px] flex items-center justify-center text-white text-center overflow-hidden" 
+            className="relative bg-cover bg-center min-h-screen flex justify-center md:items-center text-white text-center py-10" 
             style={{ backgroundImage: "url('/images/hero.png')" }} 
         >
             <div className="absolute inset-0 bg-black/30"></div>
             
-            <div className="relative z-10 px-4">
-                {/* CHANGE: Added smaller base font size (text-4xl) and an intermediate size (sm:text-5xl) for better scaling */}
+            <div className="relative z-10 px-4 pt-28 md:pt-0">
                 <motion.h2 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg">
                     Wujudkan Kota Lebih Baik,
                 </motion.h2>
                 <motion.h3 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="text-4xl sm:text-5xl md:text-6xl font-bold mb-8 drop-shadow-lg">
                     Dimulai dari Laporan Anda!
                 </motion.h3>
-                {/* CHANGE: Reduced base font size to text-base for better readability on small screens */}
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.4 }} className="text-base md:text-xl mb-12 max-w-2xl mx-auto">
                     Bergabung dengan ribuan warga yang telah berkontribusi untuk perbaikan kota Malang.
                 </motion.p>
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }} className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                    {/* CHANGE: Reduced padding (py-3 px-6) and font size (text-lg) on mobile */}
                     <Link to="/lapor" className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
                         Lapor Sekarang!
                     </Link>
@@ -78,12 +75,9 @@ const Hero = () => {
                     </Link>
                 </motion.div>
                 
-                {/* Stats bar */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.8 }} className="mt-16 bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-4xl mx-auto">
-                    {/* CHANGE: Added gap-y-6 to ensure vertical spacing when items wrap */}
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-6 md:gap-12">
                         <div className="text-center">
-                            {/* CHANGE: Reduced font size on mobile (text-3xl) */}
                             <div className="text-3xl md:text-4xl font-bold text-blue-300">
                                 {loading ? '...' : `${stats.processed}+`}
                             </div>
