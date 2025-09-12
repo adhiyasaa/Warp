@@ -22,7 +22,7 @@ const Footer = () => {
             variants={fadeIn}
             transition={{ duration: 0.5 }}
           >
-            <img src="/images/logo.png" alt="warp Logo" className="h-10 w-auto mb-4" />
+            <img src="/images/logo.png" alt="warp Logo" className="h-14 w-auto mb-4" />
             <p className="text-gray-400 mb-6 leading-relaxed">
               Memberdayakan warga Malang untuk membangun kota yang lebih baik melalui laporan yang cepat dan transparan.
             </p>
