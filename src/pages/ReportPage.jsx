@@ -1,3 +1,4 @@
+// src/pages/ReportPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -7,43 +8,71 @@ import Navbar from '../components/Navbar';
 import { motion } from 'framer-motion';
 import MapPicker from '../components/MapPicker';
 
-// DIHAPUS: Objek labelDictionary tidak lagi diperlukan
-// const labelDictionary = { ... };
+const labelDictionary = {
+  'Jalan': 'Jalan Rusak / Berlubang',
+  'Halte': 'Halte Rusak',
+  'Trotoar': 'Trotoar Rusak',
+  'Lampu': 'Lampu Rusak / Mati',
+  'Parit': 'Parit Tersumbat',
+  'Rambu': 'Rambu Rusak'
+};
 
 const ReportPage = () => {
     const [title, setTitle] = useState('');
     const [image, setImage] = useState(null);
     const [location, setLocation] = useState(null);
-    const [description, setDescription] = useState(''); // State ini tetap ada untuk input manual
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [description, setDescription] = useState('');
+    const [detections, setDetections] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
     const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
-    
-    // DIHAPUS: State untuk AI tidak lagi diperlukan
-    // const [isAnalyzing, setIsAnalyzing] = useState(false);
-    // const [detections, setDetections] = useState([]);
     
     const { currentUser } = useAuth();
     const { profile } = useProfile(currentUser?.id);
     const navigate = useNavigate();
 
-    // FUNGSI INI DIPERBARUI: Logika analisis AI dihapus total
-    const handleImageChange = (e) => {
+    const handleImageChange = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setImage(file);
         setImagePreview(URL.createObjectURL(file));
-        setError(''); // Menghapus error sebelumnya jika ada
+        setIsAnalyzing(true);
+        setDetections([]);
+        setDescription('');
+        setError('');
+
+        const formData = new FormData();
+        formData.append('image', file);
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/api/analyze`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Analisis gagal, pastikan backend AI berjalan.');
+            }
+            const data = await response.json();
+            setDescription(data.description);
+            setDetections(data.detections);
+        } catch (error) {
+            console.error(error);
+            setError('Error: ' + error.message);
+            setImage(null);
+            setImagePreview(null);
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
 
-    // FUNGSI INI DIPERBARUI: Validasi diperketat dengan menyertakan deskripsi
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Deskripsi ditambahkan ke dalam validasi
-        if (!title || !image || !location || !description) {
-            setError("Judul, deskripsi, dokumentasi, dan lokasi di peta wajib diisi.");
+        if (!title || !image || !location) {
+            setError("Judul, dokumentasi, dan lokasi di peta wajib diisi.");
             return;
         }
         setIsLoading(true);
@@ -58,7 +87,7 @@ const ReportPage = () => {
 
             const { error: insertError } = await supabase.from('reports').insert({
                 title,
-                description, // Deskripsi dari input manual
+                description,
                 event_date: eventDate,
                 image_url: urlData.publicUrl,
                 user_id: currentUser.id,
@@ -88,7 +117,7 @@ const ReportPage = () => {
                 <div className="container mx-auto px-4 pt-28 pb-16">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4">Laporkan Kerusakan Fasilitas Umum</h1>
-                        <p className="text-white/70 max-w-2xl mx-auto">Unggah foto, pilih lokasi, dan berikan deskripsi mengenai kerusakan yang Anda temukan.</p>
+                        <p className="text-white/70 max-w-2xl mx-auto">Unggah foto, dan biarkan AI kami membantu mengisi detailnya untuk Anda.</p>
                     </motion.div>
 
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="max-w-3xl mx-auto bg-slate-900/50 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-cyan-400/20 relative">
@@ -112,7 +141,7 @@ const ReportPage = () => {
                                 <label className="block text-sm font-bold mb-2">Unggah Foto <span className="text-red-500">*</span></label>
                                 <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-white/30 border-dashed rounded-md relative">
                                     <input id="file-upload" type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImageChange} accept="image/*" />
-                                    {/* DIHAPUS: Tampilan loading analisis AI */}
+                                    {isAnalyzing && <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-md"><p>Menganalisis foto...</p></div>}
                                     
                                     {imagePreview ? (
                                         <img src={imagePreview} alt="Preview" className="max-h-48 rounded-md" />
@@ -129,23 +158,26 @@ const ReportPage = () => {
                                 <label className="block text-sm font-bold mb-2">Pilih Lokasi di Peta <span className="text-red-500">*</span></label>
                                 <MapPicker onLocationChange={setLocation} />
                             </div>
-
-                            {/* BAGIAN INI DIPERBARUI: Kolom deteksi AI dihapus, deskripsi menjadi input manual */}
-                            <div>
-                                <label className="block text-sm font-bold mb-2" htmlFor="description">Deskripsi <span className="text-red-500">*</span></label>
-                                <textarea 
-                                    id="description"
-                                    placeholder="Jelaskan detail kerusakan di sini..." 
-                                    value={description} 
-                                    onChange={(e) => setDescription(e.target.value)} 
-                                    rows="4" 
-                                    className="form-textarea w-full p-3 bg-slate-800/50 text-cyan-300 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400"
-                                />
+                            
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold mb-2">Hasil Deteksi AI</label>
+                                    <div className="p-3 bg-black/30 rounded-lg min-h-[100px]">
+                                        {detections.length > 0 ? (
+                                            <ul className="list-disc list-inside text-cyan-300">
+                                                {detections.map((item, index) => <li key={index}>{labelDictionary[item] || item}</li>)}
+                                            </ul>
+                                        ) : ( <p className="text-white/50 text-sm">Belum ada objek terdeteksi.</p> )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold mb-2">Deskripsi Otomatis (AI)</label>
+                                    <textarea placeholder="Deskripsi akan terisi otomatis..." value={description} onChange={(e) => setDescription(e.target.value)} rows="3" className="form-textarea w-full p-3 bg-slate-800/50 text-cyan-300 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400"></textarea>
+                                </div>
                             </div>
                             
-                            {/* TOMBOL INI DIPERBARUI: Logika disable dan teks disederhanakan */}
-                            <button type="submit" disabled={isLoading} className="w-full p-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                                {isLoading ? 'Mengirim...' : 'Kirim Laporan'}
+                            <button type="submit" disabled={isLoading || isAnalyzing} className="w-full p-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                {isLoading ? 'Mengirim...' : (isAnalyzing ? 'Menunggu Analisis AI...' : 'Kirim Laporan')}
                             </button>
                         </form>
                     </motion.div>
