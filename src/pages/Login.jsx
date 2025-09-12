@@ -119,7 +119,7 @@ const Login = () => {
                         transition={{ delay: 0.4 }}
                     >
                         <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                            Login LaporCepat
+                            Login
                         </h1>
                         <motion.p 
                             className="text-blue-200/80"
