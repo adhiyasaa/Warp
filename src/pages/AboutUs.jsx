@@ -100,7 +100,7 @@ const AboutUs = () => {
         <div className="bg-gray-50 min-h-screen">
             <Navbar />
 
-            <header className="relative text-white text-center py-32 bg-gradient-to-r from-blue-900 to-blue-700 overflow-hidden">
+            <header className="relative text-white text-center py-32 bg-gradient-to-b from-[#001722] to-[#00293C] overflow-hidden">
                 <div className="absolute inset-0 bg-black/20"></div>
                 <div className="absolute top-20 left-20 w-16 h-16 rounded-full bg-white/10 animate-float1"></div>
                 <div className="absolute bottom-40 right-32 w-24 h-24 rounded-full bg-blue-400/20 animate-float2"></div>
@@ -154,7 +154,7 @@ const AboutUs = () => {
                     transition={{ duration: 0.8 }}
                     className="mb-16"
                 >
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 text-white shadow-xl">
+                    <div className="bg-gradient-to-b from-[#001722] to-[#00293C] rounded-2xl p-8 text-white shadow-xl">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                             <div className="p-4">
                                 <div className="text-4xl font-bold mb-2">{loading ? '...' : `${stats.processed}+`}</div>
