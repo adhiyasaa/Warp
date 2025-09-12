@@ -1,6 +1,8 @@
+// src/components/Footer.jsx
 import React from 'react';
 import { FaMapMarkerAlt, FaEnvelope, FaPhone, FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const fadeIn = {
@@ -11,7 +13,7 @@ const Footer = () => {
   return (
     <footer className="bg-gray-900 text-white pt-16 pb-8">
       <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* About Column */}
           <motion.div 
             initial="hidden"
@@ -20,7 +22,7 @@ const Footer = () => {
             variants={fadeIn}
             transition={{ duration: 0.5 }}
           >
-            <h3 className="text-3xl font-bold font-serif mb-4 text-blue-400">LaporCepat</h3>
+            <img src="/images/logo.png" alt="warp Logo" className="h-10 w-auto mb-4" />
             <p className="text-gray-400 mb-6 leading-relaxed">
               Memberdayakan warga Malang untuk membangun kota yang lebih baik melalui laporan yang cepat dan transparan.
             </p>
@@ -48,28 +50,28 @@ const Footer = () => {
             <h4 className="text-xl font-bold mb-6 text-white">Navigasi Cepat</h4>
             <ul className="space-y-3">
               <li>
-                <a href="/" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
+                <Link to="/" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
                   <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/lapor" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
+                <Link to="/lapor" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
                   <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
                   Buat Laporan
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/about" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
+                <Link to="/about" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
                   <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
                   Tentang Kami
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/semua-laporan" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
+                <Link to="/semua-laporan" className="text-gray-400 hover:text-blue-400 transition-colors flex items-center">
                   <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
                   Laporan Terkini
-                </a>
+                </Link>
               </li>
             </ul>
           </motion.div>
@@ -86,12 +88,12 @@ const Footer = () => {
             <ul className="space-y-4">
               <li className="flex items-start">
                 <FaMapMarkerAlt className="mt-1 text-blue-400 mr-4 flex-shrink-0" />
-                <span className="text-gray-400">Jl. A. Yani No. 1, Malang, Jawa Timur, Indonesia</span>
+                <span className="text-gray-400">Jl. Veteran, Malang, Jawa Timur, Indonesia</span>
               </li>
               <li className="flex items-center">
                 <FaEnvelope className="text-blue-400 mr-4 flex-shrink-0" />
-                <a href="mailto:kontak@laporcepat.com" className="text-gray-400 hover:text-blue-400 transition-colors">
-                  kontak@laporcepat.com
+                <a href="mailto:kontak@warp.com" className="text-gray-400 hover:text-blue-400 transition-colors">
+                  warp@gmail.com
                 </a>
               </li>
               <li className="flex items-center">
@@ -103,32 +105,6 @@ const Footer = () => {
             </ul>
           </motion.div>
 
-          {/* Newsletter */}
-          <motion.div 
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeIn}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <h4 className="text-xl font-bold mb-6 text-white">Berlangganan</h4>
-            <p className="text-gray-400 mb-4">
-              Dapatkan update terbaru tentang perkembangan laporan dan fitur baru kami.
-            </p>
-            <form className="flex">
-              <input 
-                type="email" 
-                placeholder="Email Anda" 
-                className="px-4 py-3 bg-gray-700 text-white rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-              />
-              <button 
-                type="submit" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-r-md transition-colors"
-              >
-                Kirim
-              </button>
-            </form>
-          </motion.div>
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center">
@@ -139,7 +115,7 @@ const Footer = () => {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="text-gray-500 text-sm"
           >
-            &copy; {new Date().getFullYear()} LaporCepat. All rights reserved. | 
+            &copy; {new Date().getFullYear()} warp. All rights reserved. | 
             <a href="#" className="hover:text-blue-400 ml-2 transition-colors">Kebijakan Privasi</a> | 
             <a href="#" className="hover:text-blue-400 ml-2 transition-colors">Syarat & Ketentuan</a>
           </motion.p>
@@ -150,7 +126,7 @@ const Footer = () => {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="text-gray-600 text-xs mt-2"
           >
-            Wujudkan Kota Lebih Baik, Mulai Dari Anda.
+            warga aduan realtime & percaya
           </motion.p>
         </div>
       </div>
