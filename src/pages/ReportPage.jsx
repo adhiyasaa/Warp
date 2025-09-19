@@ -93,8 +93,8 @@ const ReportPage = () => {
     // Fallback: berbasis jumlah bbox
     let level = 'Tidak ada kerusakan';
     if (totalBoxes === 0) level = 'Tidak ada kerusakan';
-    else if (totalBoxes <= 2) level = 'Ringan';
-    else if (totalBoxes <= 5) level = 'Sedang';
+    else if (totalBoxes <= 1) level = 'Ringan';
+    else if (totalBoxes <= 3) level = 'Sedang';
     else level = 'Berat';
 
     return {
