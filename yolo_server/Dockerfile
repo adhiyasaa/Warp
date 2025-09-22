@@ -1,20 +1,19 @@
-# Tahap 1: Build aolikasi React
-FROM node:18-alpine as builder
+FROM python:3.10-slim
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+EXPOSE 5000
 
-RUN npm run build
-
-# Tahap 2: Sajikan hasil build dengan Nginx
-FROM nginx:stable-alpine
-# Salin hasil build dari tahap sebelumnya ke direktori web Nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
-# Salin konfigurasi Nginx kustom
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Jalankan Flask langsung
+CMD ["python", "app.py"]
