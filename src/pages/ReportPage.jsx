@@ -16,11 +16,11 @@ const labelDictionary = {
   'Rambu': 'Rambu Rusak'
 };
 
-// --- Fungsi untuk generate deskripsi final + tingkat kerusakan ---
+// --- Fungsi untuk generate deskripsi panjang + tingkat kerusakan ---
 const generateFinalDescription = (description) => {
   if (!description) {
     return {
-      description: '',
+      description: 'Tidak ada deskripsi yang dihasilkan.',
       level: 'Tidak diketahui',
       basis: 'Deskripsi kosong.'
     };
@@ -30,80 +30,47 @@ const generateFinalDescription = (description) => {
 
   // Tidak ada kerusakan
   if (desc.includes('tidak ada kerusakan') || desc.includes('no damage')) {
-    return {
-      description: 'Tidak ada kerusakan fasilitas umum yang terlihat pada gambar.',
-      level: 'Tidak ada kerusakan',
-      basis: 'AI menyatakan tidak ada kerusakan.'
-    };
+    const finalDesc =
+      "Berdasarkan analisis gambar, tidak ditemukan adanya tanda-tanda kerusakan pada fasilitas umum. Seluruh struktur terlihat dalam kondisi baik dan masih dapat digunakan sebagaimana mestinya tanpa hambatan. Dengan kondisi ini, dapat dipastikan bahwa fasilitas dalam keadaan aman, sehingga tingkat kerusakan dikategorikan sebagai: Tidak ada kerusakan.";
+    return { description: finalDesc, level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
   }
 
   // Lampu mati
   if (desc.includes('lampu') && (desc.includes('mati') || desc.includes('tidak berfungsi'))) {
-    return {
-      description: 'Lampu jalan tidak berfungsi (mati).',
-      level: 'Ringan',
-      basis: 'Lampu mati dikategorikan kerusakan ringan.'
-    };
+    const level = 'Ringan';
+    const finalDesc =
+      "Hasil analisis menunjukkan bahwa lampu jalan pada lokasi ini tidak berfungsi dengan baik. Kondisi lampu yang mati dapat mengurangi kualitas penerangan jalan pada malam hari, sehingga berpotensi membahayakan pengguna jalan dan pejalan kaki. Meskipun demikian, kerusakan ini hanya berdampak pada fungsi penerangan tanpa merusak struktur fisik di sekitarnya. Oleh karena itu, tingkat kerusakan dikategorikan sebagai kerusakan " +
+      level + ".";
+    return { description: finalDesc, level, basis: 'Lampu mati dikategorikan kerusakan ringan.' };
   }
 
   // Halte rusak
-  if (desc.includes('halte') && (desc.includes('rusak') || desc.includes('atap') || desc.includes('hilang'))) {
-    return {
-      description: 'Halte mengalami kerusakan pada atap dan beberapa bagian hilang.',
-      level: 'Sedang',
-      basis: 'Kerusakan struktural halte dikategorikan sebagai tingkat sedang.'
-    };
+  if (desc.includes('halte') && (desc.includes('rusak') || desc.includes('atap') || desc.includes('runtuh') || desc.includes('hilang'))) {
+    const level = 'Sedang';
+    const finalDesc =
+      "Berdasarkan hasil analisis pada gambar, struktur halte bus mengalami kerusakan yang cukup jelas. Atap halte terlihat rusak dengan beberapa bagian runtuh atau hilang, sehingga mengurangi kenyamanan dan perlindungan penumpang dari hujan maupun panas. Kondisi ini dapat mengganggu fungsi halte sebagai tempat tunggu yang aman dan layak digunakan. Dengan memperhatikan dampak kerusakan pada fungsi utama halte, tingkat kerusakan dikategorikan sebagai kerusakan " +
+      level + ".";
+    return { description: finalDesc, level, basis: 'Kerusakan struktural halte dikategorikan sedang.' };
   }
 
   // Jalan rusak
   if (desc.includes('jalan') && (desc.includes('rusak') || desc.includes('berlubang'))) {
+    let level = 'Sedang';
+    let severity = 'Kerusakan terlihat berupa lubang-lubang kecil hingga sedang pada permukaan jalan.';
     if (desc.includes('besar') || desc.includes('parah')) {
-      return {
-        description: 'Jalan mengalami kerusakan besar/berlubang parah.',
-        level: 'Berat',
-        basis: 'Kerusakan jalan parah → tingkat berat.'
-      };
+      level = 'Berat';
+      severity = 'Kerusakan jalan tergolong parah, dengan lubang besar dan area yang rusak meluas di sepanjang jalur.';
     }
-    return {
-      description: 'Jalan mengalami kerusakan/berlubang.',
-      level: 'Sedang',
-      basis: 'Kerusakan jalan → tingkat sedang.'
-    };
-  }
-
-  // Trotoar rusak
-  if (desc.includes('trotoar') && desc.includes('rusak')) {
-    return {
-      description: 'Trotoar mengalami kerusakan.',
-      level: 'Ringan',
-      basis: 'Trotoar rusak dikategorikan ringan.'
-    };
-  }
-
-  // Parit tersumbat
-  if (desc.includes('parit') && desc.includes('tersumbat')) {
-    return {
-      description: 'Parit tersumbat dan tidak berfungsi optimal.',
-      level: 'Sedang',
-      basis: 'Parit tersumbat dikategorikan sedang.'
-    };
-  }
-
-  // Rambu rusak
-  if (desc.includes('rambu') && desc.includes('rusak')) {
-    return {
-      description: 'Rambu lalu lintas mengalami kerusakan.',
-      level: 'Ringan',
-      basis: 'Rambu rusak dikategorikan ringan.'
-    };
+    const finalDesc =
+      `Analisis pada gambar memperlihatkan bahwa kondisi jalan di lokasi ini mengalami kerusakan. ${severity} Situasi ini berpotensi menurunkan kenyamanan berkendara, meningkatkan risiko kecelakaan, serta mempercepat kerusakan kendaraan pengguna jalan. Dengan mempertimbangkan dampak dan tingkat keparahan kerusakan, kondisi ini dikategorikan sebagai kerusakan ${level}.`;
+    return { description: finalDesc, level, basis: `Kerusakan jalan dikategorikan ${level}.` };
   }
 
   // fallback
-  return {
-    description,
-    level: 'Tidak diketahui',
-    basis: 'AI tidak memberikan indikasi kerusakan yang jelas.'
-  };
+  const finalDesc =
+    description +
+    " Berdasarkan informasi yang tersedia, kerusakan terdeteksi namun tingkat kerusakan tidak dapat dipastikan. Untuk sementara, kondisi ini dikategorikan sebagai kerusakan tingkat Tidak diketahui.";
+  return { description: finalDesc, level: 'Tidak diketahui', basis: 'AI tidak memberikan indikasi kerusakan yang jelas.' };
 };
 
 const ReportPage = () => {
@@ -177,7 +144,7 @@ const ReportPage = () => {
       // deteksi YOLO
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // deskripsi AI → generate final
+      // deskripsi AI → generate final paragraf
       const aiDescription = data.description || data.ai_description || '';
       const final = generateFinalDescription(aiDescription);
 
@@ -226,7 +193,7 @@ const ReportPage = () => {
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        // damage_level: damageLevel, // aktifkan kalau tabel punya kolom ini
+        // damage_level: damageLevel, // aktifkan kalau tabel sudah punya kolom ini
       });
       if (insertError) throw insertError;
 
@@ -401,7 +368,7 @@ const ReportPage = () => {
                     placeholder="Deskripsi akan terisi otomatis..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows="3"
+                    rows="6"
                     className="form-textarea w-full p-3 bg-slate-800/50 text-cyan-300 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder:text-slate-400"
                   />
                 </div>
