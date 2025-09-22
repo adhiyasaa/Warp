@@ -16,6 +16,49 @@ const labelDictionary = {
   Rambu: 'Rambu Rusak',
 };
 
+/**
+ * Ekstrak tingkat kerusakan dari teks deskripsi AI.
+ * Mendukung pola:
+ *  - "Tingkat kerusakan: Berat."
+ *  - "Severity: Sedang"
+ *  - "Kerusakan: Ringan"
+ *  - versi case-insensitive, ada/tanpa titik di akhir.
+ */
+const parseDamageFromText = (text = '') => {
+  const t = String(text).toLowerCase();
+
+  // daftar label yang valid
+  const LABELS = ['tidak ada kerusakan', 'ringan', 'sedang', 'berat', 'tidak diketahui'];
+
+  // coba temukan pola eksplisit
+  const patterns = [
+    /tingkat\s*kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i,
+    /severity\s*[:\-]\s*(none|ringan|sedang|berat)/i,
+    /kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m && m[1]) {
+      const val = m[1].toLowerCase();
+      if (val === 'none') return 'Tidak ada kerusakan';
+      // kapitalisasi awal
+      if (LABELS.includes(val)) {
+        return val === 'tidak ada kerusakan'
+          ? 'Tidak ada kerusakan'
+          : val.charAt(0).toUpperCase() + val.slice(1);
+      }
+    }
+  }
+
+  // fallback: tebakan berdasarkan kata kunci umum
+  if (t.includes('tidak ada kerusakan') || t.includes('no damage')) return 'Tidak ada kerusakan';
+  if (t.includes('berat') || t.includes('parah') || t.includes('severe')) return 'Berat';
+  if (t.includes('sedang') || t.includes('moderate')) return 'Sedang';
+  if (t.includes('ringan') || t.includes('minor')) return 'Ringan';
+
+  return 'Tidak diketahui';
+};
+
 const ReportPage = () => {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
@@ -52,6 +95,13 @@ const ReportPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // validasi ukuran file (opsional, contoh 5MB)
+    const FIVE_MB = 5 * 1024 * 1024;
+    if (file.size > FIVE_MB) {
+      setError('Ukuran file maksimal 5MB.');
+      return;
+    }
+
     setImage(file);
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
@@ -87,11 +137,15 @@ const ReportPage = () => {
       const data = await response.json();
 
       // hasil YOLO
-      setDetections(Array.isArray(data.detections) ? data.detections : []);
+      const dets = Array.isArray(data.detections) ? data.detections : [];
+      setDetections(dets);
 
-      // hasil Gemini
+      // hasil Gemini (deskripsi sudah memuat "Tingkat kerusakan: ...")
       const aiDescription = data.description || '';
-      const aiLevel = data.damage_level || 'Tidak diketahui';
+      // ambil level dari field backend kalau ada, jika tidak parse dari deskripsi
+      const aiLevelRaw = data.damage_level || parseDamageFromText(aiDescription);
+      const aiLevel =
+        aiLevelRaw === 'none' ? 'Tidak ada kerusakan' : aiLevelRaw || 'Tidak diketahui';
 
       setDescription(aiDescription);
       setDamageLevel(aiLevel);
@@ -103,8 +157,7 @@ const ReportPage = () => {
     } catch (err) {
       console.error(err);
       setError('Error: ' + err.message);
-      setImage(null);
-      setImagePreview(null);
+      // biarkan preview tetap ada agar user tidak perlu upload ulang
       setDamageLevel('');
       setDamageBasis('');
     } finally {
@@ -131,7 +184,7 @@ const ReportPage = () => {
 
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description,
+        description, // deskripsi sudah termasuk "Tingkat kerusakan: ..."
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
