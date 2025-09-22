@@ -16,6 +16,96 @@ const labelDictionary = {
   'Rambu': 'Rambu Rusak'
 };
 
+// --- Fungsi untuk generate deskripsi final + tingkat kerusakan ---
+const generateFinalDescription = (description) => {
+  if (!description) {
+    return {
+      description: '',
+      level: 'Tidak diketahui',
+      basis: 'Deskripsi kosong.'
+    };
+  }
+
+  const desc = description.toLowerCase();
+
+  // Tidak ada kerusakan
+  if (desc.includes('tidak ada kerusakan') || desc.includes('no damage')) {
+    return {
+      description: 'Tidak ada kerusakan fasilitas umum yang terlihat pada gambar.',
+      level: 'Tidak ada kerusakan',
+      basis: 'AI menyatakan tidak ada kerusakan.'
+    };
+  }
+
+  // Lampu mati
+  if (desc.includes('lampu') && (desc.includes('mati') || desc.includes('tidak berfungsi'))) {
+    return {
+      description: 'Lampu jalan tidak berfungsi (mati).',
+      level: 'Ringan',
+      basis: 'Lampu mati dikategorikan kerusakan ringan.'
+    };
+  }
+
+  // Halte rusak
+  if (desc.includes('halte') && (desc.includes('rusak') || desc.includes('atap') || desc.includes('hilang'))) {
+    return {
+      description: 'Halte mengalami kerusakan pada atap dan beberapa bagian hilang.',
+      level: 'Sedang',
+      basis: 'Kerusakan struktural halte dikategorikan sebagai tingkat sedang.'
+    };
+  }
+
+  // Jalan rusak
+  if (desc.includes('jalan') && (desc.includes('rusak') || desc.includes('berlubang'))) {
+    if (desc.includes('besar') || desc.includes('parah')) {
+      return {
+        description: 'Jalan mengalami kerusakan besar/berlubang parah.',
+        level: 'Berat',
+        basis: 'Kerusakan jalan parah → tingkat berat.'
+      };
+    }
+    return {
+      description: 'Jalan mengalami kerusakan/berlubang.',
+      level: 'Sedang',
+      basis: 'Kerusakan jalan → tingkat sedang.'
+    };
+  }
+
+  // Trotoar rusak
+  if (desc.includes('trotoar') && desc.includes('rusak')) {
+    return {
+      description: 'Trotoar mengalami kerusakan.',
+      level: 'Ringan',
+      basis: 'Trotoar rusak dikategorikan ringan.'
+    };
+  }
+
+  // Parit tersumbat
+  if (desc.includes('parit') && desc.includes('tersumbat')) {
+    return {
+      description: 'Parit tersumbat dan tidak berfungsi optimal.',
+      level: 'Sedang',
+      basis: 'Parit tersumbat dikategorikan sedang.'
+    };
+  }
+
+  // Rambu rusak
+  if (desc.includes('rambu') && desc.includes('rusak')) {
+    return {
+      description: 'Rambu lalu lintas mengalami kerusakan.',
+      level: 'Ringan',
+      basis: 'Rambu rusak dikategorikan ringan.'
+    };
+  }
+
+  // fallback
+  return {
+    description,
+    level: 'Tidak diketahui',
+    basis: 'AI tidak memberikan indikasi kerusakan yang jelas.'
+  };
+};
+
 const ReportPage = () => {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
@@ -37,37 +127,6 @@ const ReportPage = () => {
   const { currentUser } = useAuth();
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
-
-  const inferLevelFromAIText = (text) => {
-  if (!text || typeof text !== 'string') return null;
-
-  const t = text.toLowerCase();
-
-  const beratKeys  = ['berat', 'parah', 'severe', 'rusak berat', 'kerusakan signifikan', 'major'];
-  const sedangKeys = ['sedang', 'moderate', 'cukup parah', 'menengah'];
-  const ringanKeys = ['ringan', 'minor', 'kecil'];
-
-  const hasAny = (keys) => keys.some(k => t.includes(k));
-
-  if (hasAny(beratKeys))  return { level: 'Berat',  basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan berat).' };
-  if (hasAny(sedangKeys)) return { level: 'Sedang', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan sedang).' };
-  if (hasAny(ringanKeys)) return { level: 'Ringan', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan ringan).' };
-
-  // aturan tambahan → deteksi frasa umum
-  if (t.includes('lampu') && (t.includes('mati') || t.includes('tidak berfungsi'))) {
-    return { level: 'Ringan', basis: 'Lampu jalan tidak berfungsi, dikategorikan kerusakan ringan.' };
-  }
-
-  if (t.includes('jalan') && (t.includes('berlubang') || t.includes('rusak'))) {
-    return { level: 'Sedang', basis: 'Jalan berlubang/rusak, dikategorikan kerusakan sedang.' };
-  }
-
-  const noneKeys = ['tidak ada kerusakan', 'no damage', 'baik', 'normal'];
-  if (hasAny(noneKeys)) return { level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
-
-  return null;
-};
-
 
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
@@ -115,32 +174,19 @@ const ReportPage = () => {
 
       const data = await response.json();
 
-      // simpan hasil deteksi YOLO
+      // deteksi YOLO
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // simpan deskripsi AI
+      // deskripsi AI → generate final
       const aiDescription = data.description || data.ai_description || '';
-      setDescription(aiDescription);
+      const final = generateFinalDescription(aiDescription);
 
-      // tentukan tingkat kerusakan berdasarkan AI
-      let aiLevelPayload = null;
-      if (data.damage_level) {
-        aiLevelPayload = { level: String(data.damage_level), basis: data.damage_basis || 'Level dari backend AI.' };
-      } else {
-        aiLevelPayload = inferLevelFromAIText(aiDescription);
-      }
+      setDescription(final.description);
+      setDamageLevel(final.level);
+      setDamageBasis(final.basis);
 
-      if (aiLevelPayload) {
-        setDamageLevel(aiLevelPayload.level);
-        setDamageBasis(aiLevelPayload.basis);
-
-        // kalau AI bilang tidak ada kerusakan, kosongkan daftar deteksi
-        if (aiLevelPayload.level === 'Tidak ada kerusakan') {
-          setDetections([]);
-        }
-      } else {
-        setDamageLevel('Tidak diketahui');
-        setDamageBasis('AI tidak memberikan indikasi kerusakan.');
+      if (final.level === 'Tidak ada kerusakan') {
+        setDetections([]);
       }
 
     } catch (err) {
@@ -180,7 +226,7 @@ const ReportPage = () => {
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        // damage_level: damageLevel, // uncomment kalau tabel sudah punya kolom ini
+        // damage_level: damageLevel, // aktifkan kalau tabel punya kolom ini
       });
       if (insertError) throw insertError;
 
