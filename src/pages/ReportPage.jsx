@@ -8,69 +8,12 @@ import { motion } from 'framer-motion';
 import MapPicker from '../components/MapPicker';
 
 const labelDictionary = {
-  'Jalan': 'Jalan Rusak / Berlubang',
-  'Halte': 'Halte Rusak',
-  'Trotoar': 'Trotoar Rusak',
-  'Lampu': 'Lampu Rusak / Mati',
-  'Parit': 'Parit Tersumbat',
-  'Rambu': 'Rambu Rusak'
-};
-
-// --- Fungsi untuk generate deskripsi panjang + tingkat kerusakan ---
-const generateFinalDescription = (description) => {
-  if (!description) {
-    return {
-      description: 'Tidak ada deskripsi yang dihasilkan.',
-      level: 'Tidak diketahui',
-      basis: 'Deskripsi kosong.'
-    };
-  }
-
-  const desc = description.toLowerCase();
-
-  // Tidak ada kerusakan
-  if (desc.includes('tidak ada kerusakan') || desc.includes('no damage')) {
-    const finalDesc =
-      "Berdasarkan analisis gambar, tidak ditemukan adanya tanda-tanda kerusakan pada fasilitas umum. Seluruh struktur terlihat dalam kondisi baik dan masih dapat digunakan sebagaimana mestinya tanpa hambatan. Dengan kondisi ini, dapat dipastikan bahwa fasilitas dalam keadaan aman, sehingga tingkat kerusakan dikategorikan sebagai: Tidak ada kerusakan.";
-    return { description: finalDesc, level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
-  }
-
-  // Lampu mati
-  if (desc.includes('lampu') && (desc.includes('mati') || desc.includes('tidak berfungsi'))) {
-    const level = 'Ringan';
-    const finalDesc =
-      "Hasil analisis menunjukkan bahwa lampu jalan pada lokasi ini tidak berfungsi dengan baik. Kondisi lampu yang mati dapat mengurangi kualitas penerangan jalan pada malam hari, sehingga berpotensi membahayakan pengguna jalan dan pejalan kaki. Meskipun demikian, kerusakan ini hanya berdampak pada fungsi penerangan tanpa merusak struktur fisik di sekitarnya. Oleh karena itu, tingkat kerusakan dikategorikan sebagai kerusakan " +
-      level + ".";
-    return { description: finalDesc, level, basis: 'Lampu mati dikategorikan kerusakan ringan.' };
-  }
-
-  // Halte rusak
-  if (desc.includes('halte') && (desc.includes('rusak') || desc.includes('atap') || desc.includes('runtuh') || desc.includes('hilang'))) {
-    const level = 'Sedang';
-    const finalDesc =
-      "Berdasarkan hasil analisis pada gambar, struktur halte bus mengalami kerusakan yang cukup jelas. Atap halte terlihat rusak dengan beberapa bagian runtuh atau hilang, sehingga mengurangi kenyamanan dan perlindungan penumpang dari hujan maupun panas. Kondisi ini dapat mengganggu fungsi halte sebagai tempat tunggu yang aman dan layak digunakan. Dengan memperhatikan dampak kerusakan pada fungsi utama halte, tingkat kerusakan dikategorikan sebagai kerusakan " +
-      level + ".";
-    return { description: finalDesc, level, basis: 'Kerusakan struktural halte dikategorikan sedang.' };
-  }
-
-  // Jalan rusak
-  if (desc.includes('jalan') && (desc.includes('rusak') || desc.includes('berlubang'))) {
-    let level = 'Sedang';
-    let severity = 'Kerusakan terlihat berupa lubang-lubang kecil hingga sedang pada permukaan jalan.';
-    if (desc.includes('besar') || desc.includes('parah')) {
-      level = 'Berat';
-      severity = 'Kerusakan jalan tergolong parah, dengan lubang besar dan area yang rusak meluas di sepanjang jalur.';
-    }
-    const finalDesc =
-      `Analisis pada gambar memperlihatkan bahwa kondisi jalan di lokasi ini mengalami kerusakan. ${severity} Situasi ini berpotensi menurunkan kenyamanan berkendara, meningkatkan risiko kecelakaan, serta mempercepat kerusakan kendaraan pengguna jalan. Dengan mempertimbangkan dampak dan tingkat keparahan kerusakan, kondisi ini dikategorikan sebagai kerusakan ${level}.`;
-    return { description: finalDesc, level, basis: `Kerusakan jalan dikategorikan ${level}.` };
-  }
-
-  // fallback
-  const finalDesc =
-    description +
-    " Berdasarkan informasi yang tersedia, kerusakan terdeteksi namun tingkat kerusakan tidak dapat dipastikan. Untuk sementara, kondisi ini dikategorikan sebagai kerusakan tingkat Tidak diketahui.";
-  return { description: finalDesc, level: 'Tidak diketahui', basis: 'AI tidak memberikan indikasi kerusakan yang jelas.' };
+  Jalan: 'Jalan Rusak / Berlubang',
+  Halte: 'Halte Rusak',
+  Trotoar: 'Trotoar Rusak',
+  Lampu: 'Lampu Rusak / Mati',
+  Parit: 'Parit Tersumbat',
+  Rambu: 'Rambu Rusak',
 };
 
 const ReportPage = () => {
@@ -95,6 +38,7 @@ const ReportPage = () => {
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
+  // load dimensi gambar
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
       const img = new Image();
@@ -103,6 +47,7 @@ const ReportPage = () => {
       img.src = objectUrl;
     });
 
+  // ketika user upload gambar
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -141,21 +86,20 @@ const ReportPage = () => {
 
       const data = await response.json();
 
-      // deteksi YOLO
+      // hasil YOLO
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // deskripsi AI → generate final paragraf
-      const aiDescription = data.description || data.ai_description || '';
-      const final = generateFinalDescription(aiDescription);
+      // hasil Gemini
+      const aiDescription = data.description || '';
+      const aiLevel = data.damage_level || 'Tidak diketahui';
 
-      setDescription(final.description);
-      setDamageLevel(final.level);
-      setDamageBasis(final.basis);
+      setDescription(aiDescription);
+      setDamageLevel(aiLevel);
+      setDamageBasis(`AI mengategorikan sebagai ${aiLevel}.`);
 
-      if (final.level === 'Tidak ada kerusakan') {
+      if (aiLevel === 'Tidak ada kerusakan') {
         setDetections([]);
       }
-
     } catch (err) {
       console.error(err);
       setError('Error: ' + err.message);
@@ -168,10 +112,11 @@ const ReportPage = () => {
     }
   };
 
+  // submit laporan
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !image || !location) {
-      setError("Judul, dokumentasi, dan lokasi di peta wajib diisi.");
+      setError('Judul, dokumentasi, dan lokasi di peta wajib diisi.');
       return;
     }
     setIsLoading(true);
@@ -193,13 +138,13 @@ const ReportPage = () => {
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        // damage_level: damageLevel, // aktifkan kalau tabel sudah punya kolom ini
+        damage_level: damageLevel, // pastikan kolom sudah ada di DB
       });
       if (insertError) throw insertError;
 
       navigate('/laporan-saya');
     } catch (err) {
-      setError("Gagal mengirim laporan. Pastikan semua data benar.");
+      setError('Gagal mengirim laporan. Pastikan semua data benar.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -255,6 +200,7 @@ const ReportPage = () => {
                 </div>
               )}
 
+              {/* Judul & Tanggal */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold mb-2" htmlFor="title">
@@ -283,6 +229,7 @@ const ReportPage = () => {
                 </div>
               </div>
 
+              {/* Upload Foto */}
               <div>
                 <label className="block text-sm font-bold mb-2">
                   Unggah Foto <span className="text-red-500">*</span>
@@ -329,6 +276,7 @@ const ReportPage = () => {
                 )}
               </div>
 
+              {/* Lokasi */}
               <div>
                 <label className="block text-sm font-bold mb-2">
                   Pilih Lokasi di Peta <span className="text-red-500">*</span>
@@ -336,6 +284,7 @@ const ReportPage = () => {
                 <MapPicker onLocationChange={setLocation} />
               </div>
 
+              {/* Hasil AI */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold mb-2">Hasil Deteksi AI</label>
@@ -374,6 +323,7 @@ const ReportPage = () => {
                 </div>
               </div>
 
+              {/* Tombol Submit */}
               <button
                 type="submit"
                 disabled={isLoading || isAnalyzing}
