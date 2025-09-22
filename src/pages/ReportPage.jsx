@@ -104,6 +104,29 @@ const ReportPage = () => {
   };
   // ---------------------------------
 
+  // ----- NEW: Normalisasi teks & tebak level dari deskripsi AI -----
+  const inferLevelFromAIText = (text) => {
+    if (!text || typeof text !== 'string') return null;
+
+    const t = text.toLowerCase();
+
+    const beratKeys  = ['berat', 'parah', 'severe', 'rusak berat', 'kerusakan signifikan', 'major'];
+    const sedangKeys = ['sedang', 'moderate', 'cukup parah', 'menengah'];
+    const ringanKeys = ['ringan', 'minor', 'kecil'];
+
+    const hasAny = (keys) => keys.some(k => t.includes(k));
+
+    if (hasAny(beratKeys))  return { level: 'Berat',  basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan berat).' };
+    if (hasAny(sedangKeys)) return { level: 'Sedang', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan sedang).' };
+    if (hasAny(ringanKeys)) return { level: 'Ringan', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan ringan).' };
+
+    const noneKeys = ['tidak ada kerusakan', 'no damage', 'baik', 'normal'];
+    if (hasAny(noneKeys)) return { level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
+
+    return null;
+  };
+  // -----------------------------------------------------------------
+
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
       const img = new Image();
@@ -151,20 +174,46 @@ const ReportPage = () => {
 
       const data = await response.json();
 
-      // data.detections bisa berupa array label (string) atau array objek dengan bbox + label
+      // simpan deteksi mentah (kalau masih mau ditampilkan)
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // Tentukan tingkat kerusakan
-      const { level, basis } = computeDamageLevel(
-        Array.isArray(data.detections) ? data.detections : [],
-        dims.width,
-        dims.height
-      );
-      setDamageLevel(level);
-      setDamageBasis(basis);
+      // ambil deskripsi dari AI (mis. dari LLM)
+      const aiDescription = data.description || data.ai_description || '';
+      setDescription(aiDescription);
 
-      // Deskripsi dari Gemini
-      setDescription(data.description || '');
+      // --- Prioritas penentuan level: AI > teks AI > bbox fallback ---
+
+      // (1) Jika backend sudah mengembalikan level eksplisit
+      //     contoh field yang didukung: data.damage_level atau data.assessment.level
+      let aiLevelPayload = null;
+      if (data.damage_level) {
+        aiLevelPayload = { level: String(data.damage_level), basis: data.damage_basis || 'Level dari backend AI.' };
+      } else if (data.assessment && data.assessment.level) {
+        aiLevelPayload = { level: String(data.assessment.level), basis: data.assessment.basis || 'Level dari backend AI.' };
+      }
+
+      // (2) Jika tidak ada field eksplisit, tebak dari deskripsi AI
+      if (!aiLevelPayload) {
+        aiLevelPayload = inferLevelFromAIText(aiDescription);
+      }
+
+      // (3) Jika masih belum yakin, fallback ke perhitungan bbox
+      let finalLevel, finalBasis;
+      if (aiLevelPayload) {
+        finalLevel = aiLevelPayload.level;
+        finalBasis = aiLevelPayload.basis;
+      } else {
+        const { level, basis } = computeDamageLevel(
+          Array.isArray(data.detections) ? data.detections : [],
+          dims.width,
+          dims.height
+        );
+        finalLevel = level;
+        finalBasis = basis + ' (fallback)';
+      }
+
+      setDamageLevel(finalLevel);
+      setDamageBasis(finalBasis);
 
     } catch (err) {
       console.error(err);
@@ -194,8 +243,7 @@ const ReportPage = () => {
 
       const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
 
-      // Jika tabel Anda punya kolom damage_level, Anda bisa ikut simpan:
-      // Tambahkan field damage_level: damageLevel,
+      // Tambahkan field damage_level jika tabel sudah punya kolomnya
       const { error: insertError } = await supabase.from('reports').insert({
         title,
         description,
