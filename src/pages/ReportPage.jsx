@@ -38,28 +38,36 @@ const ReportPage = () => {
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
-  // ----- Helper: baca level dari deskripsi AI -----
   const inferLevelFromAIText = (text) => {
-    if (!text || typeof text !== 'string') return null;
+  if (!text || typeof text !== 'string') return null;
 
-    const t = text.toLowerCase();
+  const t = text.toLowerCase();
 
-    const beratKeys  = ['berat', 'parah', 'severe', 'rusak berat', 'kerusakan signifikan', 'major'];
-    const sedangKeys = ['sedang', 'moderate', 'cukup parah', 'menengah'];
-    const ringanKeys = ['ringan', 'minor', 'kecil'];
+  const beratKeys  = ['berat', 'parah', 'severe', 'rusak berat', 'kerusakan signifikan', 'major'];
+  const sedangKeys = ['sedang', 'moderate', 'cukup parah', 'menengah'];
+  const ringanKeys = ['ringan', 'minor', 'kecil'];
 
-    const hasAny = (keys) => keys.some(k => t.includes(k));
+  const hasAny = (keys) => keys.some(k => t.includes(k));
 
-    if (hasAny(beratKeys))  return { level: 'Berat',  basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan berat).' };
-    if (hasAny(sedangKeys)) return { level: 'Sedang', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan sedang).' };
-    if (hasAny(ringanKeys)) return { level: 'Ringan', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan ringan).' };
+  if (hasAny(beratKeys))  return { level: 'Berat',  basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan berat).' };
+  if (hasAny(sedangKeys)) return { level: 'Sedang', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan sedang).' };
+  if (hasAny(ringanKeys)) return { level: 'Ringan', basis: 'Berdasarkan interpretasi deskripsi AI (indikasi kerusakan ringan).' };
 
-    const noneKeys = ['tidak ada kerusakan', 'no damage', 'baik', 'normal'];
-    if (hasAny(noneKeys)) return { level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
+  // aturan tambahan → deteksi frasa umum
+  if (t.includes('lampu') && (t.includes('mati') || t.includes('tidak berfungsi'))) {
+    return { level: 'Ringan', basis: 'Lampu jalan tidak berfungsi, dikategorikan kerusakan ringan.' };
+  }
 
-    return null;
-  };
-  // ------------------------------------------------
+  if (t.includes('jalan') && (t.includes('berlubang') || t.includes('rusak'))) {
+    return { level: 'Sedang', basis: 'Jalan berlubang/rusak, dikategorikan kerusakan sedang.' };
+  }
+
+  const noneKeys = ['tidak ada kerusakan', 'no damage', 'baik', 'normal'];
+  if (hasAny(noneKeys)) return { level: 'Tidak ada kerusakan', basis: 'AI menyatakan tidak ada kerusakan.' };
+
+  return null;
+};
+
 
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
