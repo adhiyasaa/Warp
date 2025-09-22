@@ -32,79 +32,13 @@ const ReportPage = () => {
   const [description, setDescription] = useState('');
   const [detections, setDetections] = useState([]);
   const [damageLevel, setDamageLevel] = useState('');
-  const [damageBasis, setDamageBasis] = useState(''); // penjelasan basis perhitungan
+  const [damageBasis, setDamageBasis] = useState('');
 
   const { currentUser } = useAuth();
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
-  // ---- Helpers untuk area bbox ----
-  const boxAreaFromDetection = (det) => {
-    // Mendukung beberapa bentuk struktur bbox yang umum
-    if (det?.bbox && Array.isArray(det.bbox) && det.bbox.length === 4) {
-      const [x, y, w, h] = det.bbox;
-      return Math.max(0, w) * Math.max(0, h);
-    }
-    if (det && typeof det === 'object') {
-      const { x, y, width, height, xmin, ymin, xmax, ymax } = det;
-      if (
-        (typeof x === 'number' && typeof y === 'number' &&
-          typeof width === 'number' && typeof height === 'number')
-      ) {
-        return Math.max(0, width) * Math.max(0, height);
-      }
-      if (
-        typeof xmin === 'number' && typeof ymin === 'number' &&
-        typeof xmax === 'number' && typeof ymax === 'number'
-      ) {
-        return Math.max(0, xmax - xmin) * Math.max(0, ymax - ymin);
-      }
-    }
-    // Tidak ada info bbox yang bisa dihitung
-    return null;
-  };
-
-  const computeDamageLevel = (dets, imgW, imgH) => {
-    if (!Array.isArray(dets)) dets = [];
-    const totalBoxes = dets.length;
-
-    // Coba hitung berbasis area
-    const areas = dets
-      .map(boxAreaFromDetection)
-      .filter(a => typeof a === 'number' && isFinite(a) && a > 0);
-
-    if (imgW > 0 && imgH > 0 && areas.length > 0) {
-      const imageArea = imgW * imgH;
-      const totalBoxArea = areas.reduce((s, a) => s + a, 0);
-      const pct = (totalBoxArea / imageArea) * 100;
-
-      // Threshold berbasis % area tertutup bbox
-      let level = 'Tidak ada kerusakan';
-      if (pct > 0 && pct <= 3) level = 'Ringan';
-      else if (pct > 3 && pct <= 10) level = 'Sedang';
-      else if (pct > 10) level = 'Berat';
-
-      return {
-        level,
-        basis: `Berdasarkan persentase luas area terdeteksi ≈ ${pct.toFixed(2)}% dari foto`
-      };
-    }
-
-    // Fallback: berbasis jumlah bbox
-    let level = 'Tidak ada kerusakan';
-    if (totalBoxes === 0) level = 'Tidak ada kerusakan';
-    else if (totalBoxes <= 1) level = 'Ringan';
-    else if (totalBoxes <= 3) level = 'Sedang';
-    else level = 'Berat';
-
-    return {
-      level,
-      basis: `Berdasarkan jumlah objek terdeteksi (${totalBoxes} bounding box)`
-    };
-  };
-  // ---------------------------------
-
-  // ----- NEW: Normalisasi teks & tebak level dari deskripsi AI -----
+  // ----- Helper: baca level dari deskripsi AI -----
   const inferLevelFromAIText = (text) => {
     if (!text || typeof text !== 'string') return null;
 
@@ -125,7 +59,7 @@ const ReportPage = () => {
 
     return null;
   };
-  // -----------------------------------------------------------------
+  // ------------------------------------------------
 
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
@@ -143,7 +77,6 @@ const ReportPage = () => {
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
 
-    // Ambil dimensi gambar agar perhitungan area lebih akurat
     const dims = await loadImageDimension(previewUrl);
     setImageSize(dims);
 
@@ -156,6 +89,7 @@ const ReportPage = () => {
 
     const formData = new FormData();
     formData.append('image', file);
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
         method: 'POST',
@@ -163,7 +97,6 @@ const ReportPage = () => {
       });
 
       if (!response.ok) {
-        // Backend kita balas JSON error
         let msg = 'Analisis gagal, pastikan backend AI berjalan.';
         try {
           const errData = await response.json();
@@ -174,46 +107,33 @@ const ReportPage = () => {
 
       const data = await response.json();
 
-      // simpan deteksi mentah (kalau masih mau ditampilkan)
+      // simpan hasil deteksi YOLO
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // ambil deskripsi dari AI (mis. dari LLM)
+      // simpan deskripsi AI
       const aiDescription = data.description || data.ai_description || '';
       setDescription(aiDescription);
 
-      // --- Prioritas penentuan level: AI > teks AI > bbox fallback ---
-
-      // (1) Jika backend sudah mengembalikan level eksplisit
-      //     contoh field yang didukung: data.damage_level atau data.assessment.level
+      // tentukan tingkat kerusakan berdasarkan AI
       let aiLevelPayload = null;
       if (data.damage_level) {
         aiLevelPayload = { level: String(data.damage_level), basis: data.damage_basis || 'Level dari backend AI.' };
-      } else if (data.assessment && data.assessment.level) {
-        aiLevelPayload = { level: String(data.assessment.level), basis: data.assessment.basis || 'Level dari backend AI.' };
-      }
-
-      // (2) Jika tidak ada field eksplisit, tebak dari deskripsi AI
-      if (!aiLevelPayload) {
+      } else {
         aiLevelPayload = inferLevelFromAIText(aiDescription);
       }
 
-      // (3) Jika masih belum yakin, fallback ke perhitungan bbox
-      let finalLevel, finalBasis;
       if (aiLevelPayload) {
-        finalLevel = aiLevelPayload.level;
-        finalBasis = aiLevelPayload.basis;
-      } else {
-        const { level, basis } = computeDamageLevel(
-          Array.isArray(data.detections) ? data.detections : [],
-          dims.width,
-          dims.height
-        );
-        finalLevel = level;
-        finalBasis = basis + ' (fallback)';
-      }
+        setDamageLevel(aiLevelPayload.level);
+        setDamageBasis(aiLevelPayload.basis);
 
-      setDamageLevel(finalLevel);
-      setDamageBasis(finalBasis);
+        // kalau AI bilang tidak ada kerusakan, kosongkan daftar deteksi
+        if (aiLevelPayload.level === 'Tidak ada kerusakan') {
+          setDetections([]);
+        }
+      } else {
+        setDamageLevel('Tidak diketahui');
+        setDamageBasis('AI tidak memberikan indikasi kerusakan.');
+      }
 
     } catch (err) {
       console.error(err);
@@ -243,7 +163,6 @@ const ReportPage = () => {
 
       const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
 
-      // Tambahkan field damage_level jika tabel sudah punya kolomnya
       const { error: insertError } = await supabase.from('reports').insert({
         title,
         description,
@@ -253,7 +172,7 @@ const ReportPage = () => {
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        // damage_level: damageLevel, // uncomment kalau kolomnya ada
+        // damage_level: damageLevel, // uncomment kalau tabel sudah punya kolom ini
       });
       if (insertError) throw insertError;
 
@@ -266,7 +185,6 @@ const ReportPage = () => {
     }
   };
 
-  // Utility untuk render label deteksi (string atau objek)
   const renderDetLabel = (det) => {
     let raw = det;
     if (typeof det === 'object' && det) {
@@ -383,7 +301,6 @@ const ReportPage = () => {
                     </div>
                   )}
                 </div>
-                {/* Info dimensi (opsional, untuk debug) */}
                 {imageSize.width > 0 && (
                   <p className="text-white/40 text-xs mt-2">
                     Dimensi gambar: {imageSize.width}×{imageSize.height}px
@@ -391,7 +308,6 @@ const ReportPage = () => {
                 )}
               </div>
 
-              {/* --- LOKASI --- */}
               <div>
                 <label className="block text-sm font-bold mb-2">
                   Pilih Lokasi di Peta <span className="text-red-500">*</span>
@@ -400,7 +316,6 @@ const ReportPage = () => {
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
-                {/* --- Tingkat Kerusakan & Daftar Deteksi --- */}
                 <div>
                   <label className="block text-sm font-bold mb-2">Hasil Deteksi AI</label>
                   <div className="p-3 bg-black/30 rounded-lg min-h-[120px] space-y-2">
@@ -426,7 +341,6 @@ const ReportPage = () => {
                   </div>
                 </div>
 
-                {/* --- Deskripsi Otomatis --- */}
                 <div>
                   <label className="block text-sm font-bold mb-2">Deskripsi Otomatis (AI)</label>
                   <textarea
