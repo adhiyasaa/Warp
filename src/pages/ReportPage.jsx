@@ -57,6 +57,72 @@ const ReportPage = () => {
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
+  // ---- Helpers untuk area bbox ----
+  const boxAreaFromDetection = (det) => {
+    // Mendukung beberapa bentuk struktur bbox yang umum
+    if (det?.bbox && Array.isArray(det.bbox) && det.bbox.length === 4) {
+      const [x, y, w, h] = det.bbox;
+      return Math.max(0, w) * Math.max(0, h);
+    }
+    if (det && typeof det === 'object') {
+      const { x, y, width, height, xmin, ymin, xmax, ymax } = det;
+      if (
+        (typeof x === 'number' && typeof y === 'number' &&
+          typeof width === 'number' && typeof height === 'number')
+      ) {
+        return Math.max(0, width) * Math.max(0, height);
+      }
+      if (
+        typeof xmin === 'number' && typeof ymin === 'number' &&
+        typeof xmax === 'number' && typeof ymax === 'number'
+      ) {
+        return Math.max(0, xmax - xmin) * Math.max(0, ymax - ymin);
+      }
+    }
+    // Tidak ada info bbox yang bisa dihitung
+    return null;
+  };
+
+  const computeDamageLevel = (dets, imgW, imgH) => {
+    if (!Array.isArray(dets)) dets = [];
+    const totalBoxes = dets.length;
+
+    // Coba hitung berbasis area
+    const areas = dets
+      .map(boxAreaFromDetection)
+      .filter(a => typeof a === 'number' && isFinite(a) && a > 0);
+
+    if (imgW > 0 && imgH > 0 && areas.length > 0) {
+      const imageArea = imgW * imgH;
+      const totalBoxArea = areas.reduce((s, a) => s + a, 0);
+      const pct = (totalBoxArea / imageArea) * 100;
+
+      // Threshold berbasis % area tertutup bbox
+      let level = 'Tidak ada kerusakan';
+      if (pct > 0 && pct <= 3) level = 'Ringan';
+      else if (pct > 3 && pct <= 10) level = 'Sedang';
+      else if (pct > 10) level = 'Berat';
+
+      return {
+        level,
+        basis: `Berdasarkan persentase luas area terdeteksi ≈ ${pct.toFixed(2)}% dari foto`
+      };
+    }
+
+    // Fallback: berbasis jumlah bbox
+    let level = 'Tidak ada kerusakan';
+    if (totalBoxes === 0) level = 'Tidak ada kerusakan';
+    else if (totalBoxes <= 2) level = 'Ringan';
+    else if (totalBoxes <= 5) level = 'Sedang';
+    else level = 'Berat';
+
+    return {
+      level,
+      basis: `Berdasarkan jumlah objek terdeteksi (${totalBoxes} bounding box)`
+    };
+  };
+  // ---------------------------------
+
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
       const img = new Image();
