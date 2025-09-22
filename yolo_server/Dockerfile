@@ -1,23 +1,20 @@
-# 1. Gunakan image dasar yang ringan
-FROM python:3.11-slim
-
-# 2. (DIPERBARUI) Install dependency sistem yang dibutuhkan oleh OpenCV
-RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# 3. Set direktori kerja
+# Tahap 1: Build aolikasi React
+FROM node:18-alpine as builder
 WORKDIR /app
-
-# 4. Salin HANYA file requirements.txt terlebih dahulu
-COPY requirements.txt .
-
-# 5. Jalankan instalasi
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 6. Salin sisa file proyek Anda
+COPY package*.json ./
+RUN npm install
 COPY . .
 
-# 7. Perintah untuk menjalankan aplikasi
-CMD gunicorn --bind 0.0.0.0:$PORT app:app --timeout 300
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
-# Test update
+RUN npm run build
+
+# Tahap 2: Sajikan hasil build dengan Nginx
+FROM nginx:stable-alpine
+# Salin hasil build dari tahap sebelumnya ke direktori web Nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+# Salin konfigurasi Nginx kustom
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
