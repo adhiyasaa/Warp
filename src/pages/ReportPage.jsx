@@ -16,46 +16,23 @@ const labelDictionary = {
   Rambu: 'Rambu Rusak',
 };
 
-/**
- * Ekstrak tingkat kerusakan dari teks deskripsi AI.
- * Mendukung pola:
- *  - "Tingkat kerusakan: Berat."
- *  - "Severity: Sedang"
- *  - "Kerusakan: Ringan"
- *  - versi case-insensitive, ada/tanpa titik di akhir.
- */
+// fungsi untuk parsing tingkat kerusakan dari teks deskripsi
 const parseDamageFromText = (text = '') => {
-  const t = String(text).toLowerCase();
-
-  // daftar label yang valid
-  const LABELS = ['tidak ada kerusakan', 'ringan', 'sedang', 'berat', 'tidak diketahui'];
-
-  // coba temukan pola eksplisit
-  const patterns = [
-    /tingkat\s*kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i,
-    /severity\s*[:\-]\s*(none|ringan|sedang|berat)/i,
-    /kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m && m[1]) {
-      const val = m[1].toLowerCase();
-      if (val === 'none') return 'Tidak ada kerusakan';
-      // kapitalisasi awal
-      if (LABELS.includes(val)) {
-        return val === 'tidak ada kerusakan'
-          ? 'Tidak ada kerusakan'
-          : val.charAt(0).toUpperCase() + val.slice(1);
-      }
-    }
+  if (!text) return 'Tidak diketahui';
+  const match = text.match(
+    /tingkat kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i
+  );
+  if (match && match[1]) {
+    const val = match[1].toLowerCase();
+    if (val === 'tidak ada kerusakan') return 'Tidak ada kerusakan';
+    return val.charAt(0).toUpperCase() + val.slice(1);
   }
-
-  // fallback: tebakan berdasarkan kata kunci umum
-  if (t.includes('tidak ada kerusakan') || t.includes('no damage')) return 'Tidak ada kerusakan';
-  if (t.includes('berat') || t.includes('parah') || t.includes('severe')) return 'Berat';
-  if (t.includes('sedang') || t.includes('moderate')) return 'Sedang';
-  if (t.includes('ringan') || t.includes('minor')) return 'Ringan';
-
+  // fallback keyword
+  const lower = text.toLowerCase();
+  if (lower.includes('tidak ada kerusakan')) return 'Tidak ada kerusakan';
+  if (lower.includes('berat') || lower.includes('parah')) return 'Berat';
+  if (lower.includes('sedang')) return 'Sedang';
+  if (lower.includes('ringan')) return 'Ringan';
   return 'Tidak diketahui';
 };
 
@@ -85,7 +62,8 @@ const ReportPage = () => {
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
       const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onload = () =>
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
       img.onerror = () => resolve({ width: 0, height: 0 });
       img.src = objectUrl;
     });
@@ -94,13 +72,6 @@ const ReportPage = () => {
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // validasi ukuran file (opsional, contoh 5MB)
-    const FIVE_MB = 5 * 1024 * 1024;
-    if (file.size > FIVE_MB) {
-      setError('Ukuran file maksimal 5MB.');
-      return;
-    }
 
     setImage(file);
     const previewUrl = URL.createObjectURL(file);
@@ -120,10 +91,13 @@ const ReportPage = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/analyze`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         let msg = 'Analisis gagal, pastikan backend AI berjalan.';
@@ -137,15 +111,12 @@ const ReportPage = () => {
       const data = await response.json();
 
       // hasil YOLO
-      const dets = Array.isArray(data.detections) ? data.detections : [];
-      setDetections(dets);
+      setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // hasil Gemini (deskripsi sudah memuat "Tingkat kerusakan: ...")
+      // hasil Gemini (deskripsi otomatis sudah ada teks "Tingkat kerusakan: ...")
       const aiDescription = data.description || '';
-      // ambil level dari field backend kalau ada, jika tidak parse dari deskripsi
-      const aiLevelRaw = data.damage_level || parseDamageFromText(aiDescription);
       const aiLevel =
-        aiLevelRaw === 'none' ? 'Tidak ada kerusakan' : aiLevelRaw || 'Tidak diketahui';
+        data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
 
       setDescription(aiDescription);
       setDamageLevel(aiLevel);
@@ -157,7 +128,6 @@ const ReportPage = () => {
     } catch (err) {
       console.error(err);
       setError('Error: ' + err.message);
-      // biarkan preview tetap ada agar user tidak perlu upload ulang
       setDamageLevel('');
       setDamageBasis('');
     } finally {
@@ -177,21 +147,25 @@ const ReportPage = () => {
 
     try {
       const filePath = `public/${currentUser.id}_${Date.now()}_${image.name}`;
-      const { error: uploadError } = await supabase.storage.from('reports').upload(filePath, image);
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(filePath, image);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage
+        .from('reports')
+        .getPublicUrl(filePath);
 
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description, // deskripsi sudah termasuk "Tingkat kerusakan: ..."
+        description, // deskripsi sudah mengandung "Tingkat kerusakan: ..."
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        damage_level: damageLevel, // pastikan kolom sudah ada di DB
+        damage_level: damageLevel,
       });
       if (insertError) throw insertError;
 
@@ -207,7 +181,12 @@ const ReportPage = () => {
   const renderDetLabel = (det) => {
     let raw = det;
     if (typeof det === 'object' && det) {
-      raw = det.label || det.class || det.name || det.type || JSON.stringify(det);
+      raw =
+        det.label ||
+        det.class ||
+        det.name ||
+        det.type ||
+        JSON.stringify(det);
     }
     return labelDictionary[raw] || String(raw);
   };
@@ -230,7 +209,8 @@ const ReportPage = () => {
               Laporkan Kerusakan Fasilitas Umum
             </h1>
             <p className="text-white/70 max-w-2xl mx-auto">
-              Unggah foto, dan biarkan AI kami membantu mengisi detailnya untuk Anda.
+              Unggah foto, dan biarkan AI kami membantu mengisi detailnya
+              untuk Anda.
             </p>
           </motion.div>
 
@@ -302,7 +282,11 @@ const ReportPage = () => {
                   )}
 
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="max-h-48 rounded-md" />
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-48 rounded-md"
+                    />
                   ) : (
                     <div className="text-center">
                       <svg
@@ -318,7 +302,9 @@ const ReportPage = () => {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <p className="mt-2 text-sm text-white/70">Klik untuk upload atau drag and drop</p>
+                      <p className="mt-2 text-sm text-white/70">
+                        Klik untuk upload atau drag and drop
+                      </p>
                     </div>
                   )}
                 </div>
@@ -340,16 +326,21 @@ const ReportPage = () => {
               {/* Hasil AI */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold mb-2">Hasil Deteksi AI</label>
+                  <label className="block text-sm font-bold mb-2">
+                    Hasil Deteksi AI
+                  </label>
                   <div className="p-3 bg-black/30 rounded-lg min-h-[120px] space-y-2">
                     <p className="text-cyan-300">
                       Tingkat Kerusakan:{' '}
                       <span className="font-bold">
-                        {damageLevel || (isAnalyzing ? 'Menunggu analisis...' : '—')}
+                        {damageLevel ||
+                          (isAnalyzing ? 'Menunggu analisis...' : '—')}
                       </span>
                     </p>
                     {damageBasis && (
-                      <p className="text-white/60 text-xs italic">{damageBasis}</p>
+                      <p className="text-white/60 text-xs italic">
+                        {damageBasis}
+                      </p>
                     )}
                     <div className="h-px bg-white/10 my-2" />
                     {detections.length > 0 ? (
@@ -359,13 +350,17 @@ const ReportPage = () => {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-white/50 text-sm">Belum ada objek terdeteksi.</p>
+                      <p className="text-white/50 text-sm">
+                        Belum ada objek terdeteksi.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2">Deskripsi Otomatis (AI)</label>
+                  <label className="block text-sm font-bold mb-2">
+                    Deskripsi Otomatis (AI)
+                  </label>
                   <textarea
                     placeholder="Deskripsi akan terisi otomatis..."
                     value={description}
@@ -382,7 +377,11 @@ const ReportPage = () => {
                 disabled={isLoading || isAnalyzing}
                 className="w-full p-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Mengirim...' : isAnalyzing ? 'Menunggu Analisis AI...' : 'Kirim Laporan'}
+                {isLoading
+                  ? 'Mengirim...'
+                  : isAnalyzing
+                  ? 'Menunggu Analisis AI...'
+                  : 'Kirim Laporan'}
               </button>
             </form>
           </motion.div>
