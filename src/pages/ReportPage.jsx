@@ -1,3 +1,4 @@
+// src/pages/ReportPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
@@ -14,6 +15,24 @@ const labelDictionary = {
   Lampu: 'Lampu Rusak / Mati',
   Parit: 'Parit Tersumbat',
   Rambu: 'Rambu Rusak',
+};
+
+// Parse "Tingkat kerusakan: X" dari deskripsi bila field damage_level tidak ada
+const parseDamageFromText = (text = '') => {
+  const m = String(text).match(
+    /tingkat\s*kerusakan\s*[:\-]\s*(tidak ada kerusakan|ringan|sedang|berat)/i
+  );
+  if (m && m[1]) {
+    const val = m[1].toLowerCase();
+    if (val === 'tidak ada kerusakan') return 'Tidak ada kerusakan';
+    return val.charAt(0).toUpperCase() + val.slice(1);
+  }
+  const t = String(text).toLowerCase();
+  if (t.includes('tidak ada kerusakan') || t.includes('no damage')) return 'Tidak ada kerusakan';
+  if (t.includes('berat') || t.includes('parah')) return 'Berat';
+  if (t.includes('sedang') || t.includes('moderate')) return 'Sedang';
+  if (t.includes('ringan') || t.includes('minor')) return 'Ringan';
+  return 'Tidak diketahui';
 };
 
 const ReportPage = () => {
@@ -38,20 +57,24 @@ const ReportPage = () => {
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
-  // load dimensi gambar
   const loadImageDimension = (objectUrl) =>
     new Promise((resolve) => {
       const img = new Image();
-      img.onload = () =>
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
       img.onerror = () => resolve({ width: 0, height: 0 });
       img.src = objectUrl;
     });
 
-  // ketika user upload gambar
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // (opsional) validasi ukuran file
+    const FIVE_MB = 5 * 1024 * 1024;
+    if (file.size > FIVE_MB) {
+      setError('Ukuran file maksimal 5MB.');
+      return;
+    }
 
     setImage(file);
     const previewUrl = URL.createObjectURL(file);
@@ -71,13 +94,10 @@ const ReportPage = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/analyze`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
+        method: 'POST',
+        body: formData,
+      });
 
       if (!response.ok) {
         let msg = 'Analisis gagal, pastikan backend AI berjalan.';
@@ -90,19 +110,18 @@ const ReportPage = () => {
 
       const data = await response.json();
 
-      // hasil YOLO
+      // YOLO detections (array bebas: string atau object)
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
-      // hasil Gemini (sudah ada description + damage_level)
-      setDescription(data.description || '');
-      setDamageLevel(data.damage_level || 'Tidak diketahui');
-      setDamageBasis(
-        data.damage_level
-          ? `AI mengategorikan sebagai ${data.damage_level}.`
-          : 'AI tidak memberikan tingkat kerusakan.'
-      );
+      // Gemini result
+      const aiDescription = data.description || '';
+      const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
 
-      if (data.damage_level === 'Tidak ada kerusakan') {
+      setDescription(aiDescription);
+      setDamageLevel(aiLevel);
+      setDamageBasis(`AI mengategorikan sebagai ${aiLevel}.`);
+
+      if (aiLevel === 'Tidak ada kerusakan') {
         setDetections([]);
       }
     } catch (err) {
@@ -110,12 +129,12 @@ const ReportPage = () => {
       setError('Error: ' + err.message);
       setDamageLevel('');
       setDamageBasis('');
+      // biarkan preview tetap ada agar user tak perlu reupload
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // submit laporan
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !image || !location) {
@@ -127,18 +146,14 @@ const ReportPage = () => {
 
     try {
       const filePath = `public/${currentUser.id}_${Date.now()}_${image.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('reports')
-        .upload(filePath, image);
+      const { error: uploadError } = await supabase.storage.from('reports').upload(filePath, image);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('reports')
-        .getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
 
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description, // deskripsi dari Gemini sudah ada tingkat kerusakan
+        description, // deskripsi sudah memuat "Tingkat kerusakan: ..."
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
@@ -161,12 +176,7 @@ const ReportPage = () => {
   const renderDetLabel = (det) => {
     let raw = det;
     if (typeof det === 'object' && det) {
-      raw =
-        det.label ||
-        det.class ||
-        det.name ||
-        det.type ||
-        JSON.stringify(det);
+      raw = det.label || det.class || det.name || det.type || JSON.stringify(det);
     }
     return labelDictionary[raw] || String(raw);
   };
@@ -189,8 +199,7 @@ const ReportPage = () => {
               Laporkan Kerusakan Fasilitas Umum
             </h1>
             <p className="text-white/70 max-w-2xl mx-auto">
-              Unggah foto, dan biarkan AI kami membantu mengisi detailnya
-              untuk Anda.
+              Unggah foto, dan biarkan AI kami membantu mengisi detailnya untuk Anda.
             </p>
           </motion.div>
 
@@ -262,11 +271,7 @@ const ReportPage = () => {
                   )}
 
                   {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="max-h-48 rounded-md"
-                    />
+                    <img src={imagePreview} alt="Preview" className="max-h-48 rounded-md" />
                   ) : (
                     <div className="text-center">
                       <svg
@@ -282,9 +287,7 @@ const ReportPage = () => {
                           strokeLinejoin="round"
                         />
                       </svg>
-                      <p className="mt-2 text-sm text-white/70">
-                        Klik untuk upload atau drag and drop
-                      </p>
+                      <p className="mt-2 text-sm text-white/70">Klik untuk upload atau drag and drop</p>
                     </div>
                   )}
                 </div>
@@ -306,21 +309,16 @@ const ReportPage = () => {
               {/* Hasil AI */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold mb-2">
-                    Hasil Deteksi AI
-                  </label>
+                  <label className="block text-sm font-bold mb-2">Hasil Deteksi AI</label>
                   <div className="p-3 bg-black/30 rounded-lg min-h-[120px] space-y-2">
                     <p className="text-cyan-300">
                       Tingkat Kerusakan:{' '}
                       <span className="font-bold">
-                        {damageLevel ||
-                          (isAnalyzing ? 'Menunggu analisis...' : '—')}
+                        {damageLevel || (isAnalyzing ? 'Menunggu analisis...' : '—')}
                       </span>
                     </p>
                     {damageBasis && (
-                      <p className="text-white/60 text-xs italic">
-                        {damageBasis}
-                      </p>
+                      <p className="text-white/60 text-xs italic">{damageBasis}</p>
                     )}
                     <div className="h-px bg-white/10 my-2" />
                     {detections.length > 0 ? (
@@ -330,17 +328,13 @@ const ReportPage = () => {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-white/50 text-sm">
-                        Belum ada objek terdeteksi.
-                      </p>
+                      <p className="text-white/50 text-sm">Belum ada objek terdeteksi.</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2">
-                    Deskripsi Otomatis (AI)
-                  </label>
+                  <label className="block text-sm font-bold mb-2">Deskripsi Otomatis (AI)</label>
                   <textarea
                     placeholder="Deskripsi akan terisi otomatis..."
                     value={description}
@@ -357,11 +351,7 @@ const ReportPage = () => {
                 disabled={isLoading || isAnalyzing}
                 className="w-full p-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading
-                  ? 'Mengirim...'
-                  : isAnalyzing
-                  ? 'Menunggu Analisis AI...'
-                  : 'Kirim Laporan'}
+                {isLoading ? 'Mengirim...' : isAnalyzing ? 'Menunggu Analisis AI...' : 'Kirim Laporan'}
               </button>
             </form>
           </motion.div>
