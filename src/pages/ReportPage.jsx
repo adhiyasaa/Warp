@@ -160,7 +160,7 @@ const ReportPage = () => {
     formData.append('image', file);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
+      const response = await fetch(`/api/analyze`, {
         method: 'POST',
         body: formData,
       });

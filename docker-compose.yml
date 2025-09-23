@@ -1,34 +1,37 @@
 services:
-  # 1. Layanan Frontend (React + Nginx)
+  # 1) Frontend (Nginx menyajikan build React & proxy /api ke backend)
   frontend:
     build:
-      context: . # Menggunakan Dockerfile di root direktori
+      context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_API_URL="https://warp1-server.up.railway.app"
+      # kamu TIDAK wajib passing VITE_API_URL kalau pakai proxy /api
+      # args:
+      #   - VITE_API_URL=""
     container_name: lapor_frontend
     ports:
-      - "80:80" # Memetakan port 80 VPS ke port 80 container
-    restart: unless-stopped
-
-  # 2. Layanan Backend Utama (Node.js)
-  server:
-    build: ./server # Membangun dari Dockerfile di dalam folder 'server'
-    container_name: lapor_backend
-    env_file:
-      - ./server/.env # Memuat environment variables dari file .env
-    ports:
-      - "8000:8000" # Ganti port sesuai dengan port aplikasi Node.js Anda
+      - "80:80"
     restart: unless-stopped
     depends_on:
-      - yolo_server # Memastikan server AI jalan duluan jika perlu
+      - server
 
-  # 3. Layanan AI (Python YOLO)
+  # 2) Backend Node (Express)
+  server:
+    build: ./server
+    container_name: lapor_backend
+    env_file:
+      - ./server/.env
+    ports:
+      - "8000:8000"   # optional: exposed ke host untuk debugging
+    restart: unless-stopped
+    depends_on:
+      - yolo_server
+
+  # 3) YOLO (Flask)
   yolo_server:
-    build: ./yolo_server # Membangun dari Dockerfile di dalam folder 'yolo_server'
+    build: ./yolo_server
     container_name: lapor_yolo_server
     env_file:
-      - ./yolo_server/.env # Memuat environment variables dari file .env
+      - ./yolo_server/.env
     ports:
-      - "5000:5000" # Ganti port sesuai dengan port aplikasi Python Anda
+      - "5000:5000"   # optional: exposed ke host untuk debugging
     restart: unless-stopped
