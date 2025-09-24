@@ -93,7 +93,7 @@ const ReportDetail = () => {
                                     <p className="text-gray-600 leading-relaxed">{leftSectionText.damageLevel || "Tidak ada data tingkat kerusakan."}</p>
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-semibold text-gray-700 mb-3">Status</h2>
+                                    <h2 className="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Status</h2>
                                     <div className="flex items-center space-x-4">
                                         <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
                                             report.status === 'Selesai' ? 'bg-green-200 text-green-800' :
