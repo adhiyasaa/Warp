@@ -36,41 +36,34 @@ const parseDamageFromText = (text = '') => {
 };
 
 const formatResponseFromAI = (text) => {
-  try {
-    const jsonParse = text.match(/\{[\s\S]*\}/);
+  const s = String(text);
 
-    if (!jsonParse) {
+  try {
+    const jsonMatch = s.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
       throw new Error("JSON tidak ditemukan dalam response");
     }
 
-    console.log("text", text);
+    const data = JSON.parse(jsonMatch[0]);
 
-    console.log('jsonParse', jsonParse);
+    let description = typeof data.description === "string" ? data.description.trim() : "";
+    const damageLevel = typeof data.damage_level === "string" ? data.damage_level.trim() : null;
 
-    // const data = JSON.parse(match[0]);
+    description = description.replace(/\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+)\.?\s*$/i, "").trim();
 
-    const plainMatch = jsonParse[0].match(/^(.*?)(?:\s*Tingkat kerusakan:\s*(\w+))$/i);
+    return { description, damageLevel };
+  } catch (e) {
+    const m = s.match(/^(.*?)(?:\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+))[\.\s]*$/is);
 
-    if (jsonParse) {
-      const description = plainMatch[1].trim();
-      const damageLevel = plainMatch[2].trim();
-
-      return { description, damageLevel };
+    if (m) {
+      return { description: m[1].trim(), damageLevel: m[2].trim() };
     }
 
-    console.log('data', data);
-
-    throw new Error('Format dari AI tidak dikenali');
-
-    // // Ambil value description dan damage_level
-    // const description = data.description || null;
-    // const damageLevel = data.damage_level || null;
-
-    // return { description, damageLevel };
-  } catch {
+    console.error("Gagal parsing response dari AI:", e);
     return null;
   }
-}
+};
+
 
 const ReportPage = () => {
   const [title, setTitle] = useState('');
