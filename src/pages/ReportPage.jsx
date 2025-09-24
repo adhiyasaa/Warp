@@ -37,23 +37,34 @@ const parseDamageFromText = (text = '') => {
 
 const formatResponseFromAI = (text) => {
   try {
-    const match = text.match(/\{[\s\S]*\}/);
+    const jsonParse = text.match(/\{[\s\S]*\}/);
 
-    if (!match) {
+    if (!jsonParse) {
       throw new Error("JSON tidak ditemukan dalam response");
     }
 
     console.log("text", text);
 
-    const data = JSON.parse(match[0]);
+    // const data = JSON.parse(match[0]);
 
-    console.log('data', data);
+    const plainMatch = jsonParse[0].match(/^(.*?)(?:\s*Tingkat kerusakan:\s*(\w+))$/i);
 
-    // Ambil value description dan damage_level
-    const description = data.description || null;
-    const damageLevel = data.damage_level || null;
+    if (jsonParse) {
+      const description = plainMatch[1].trim();
+      const damageLevel = plainMatch[2].trim();
 
-    return { description, damageLevel };
+      return { description, damageLevel };
+    }
+
+    throw new Error('Format dari AI tidak dikenali');
+
+    // console.log('data', data);
+
+    // // Ambil value description dan damage_level
+    // const description = data.description || null;
+    // const damageLevel = data.damage_level || null;
+
+    // return { description, damageLevel };
   } catch {
     return null;
   }
@@ -213,7 +224,7 @@ const ReportPage = () => {
       setDescription(aiDescription.description);
       // setDamageLevel(aiLevel);
       setDamageLevel(aiDescription.damageLevel);
-      setDamageBasis(`AI mengategorikan sebagai ${aiLevel}.`);
+      setDamageBasis(`AI mengategorikan sebagai ${aiDescription.damageLevel}.`);
 
       if (aiLevel === 'Tidak ada kerusakan') {
         setDetections([]);
