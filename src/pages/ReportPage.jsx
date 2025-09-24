@@ -43,7 +43,11 @@ const formatResponseFromAI = (text) => {
       throw new Error("JSON tidak ditemukan dalam response");
     }
 
+    console.log("text", text);
+
     const data = JSON.parse(match[0]);
+
+    console.log('data', data);
 
     // Ambil value description dan damage_level
     const description = data.description || null;
