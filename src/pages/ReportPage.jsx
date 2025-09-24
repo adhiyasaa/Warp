@@ -200,6 +200,8 @@ const ReportPage = () => {
 
       const data = await response.json();
 
+      console.log(data);
+
       // YOLO detections (array bebas: string atau object)
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
