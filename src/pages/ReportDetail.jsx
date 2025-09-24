@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const separateDescriptionAndDamageLevel = (text) => {
-    const s = String(input).trim();
+    const s = String(text).trim();
 
     const re = /^(.*?)(?:\s*Tingkat\s*Kerusakan\s*:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+))\s*\.?\s*$/i;
     const m = s.match(re);
