@@ -421,9 +421,11 @@ const ReportPage = () => {
                     <div className="h-px bg-white/10 my-2" />
                     {detections.length > 0 ? (
                       <ul className="list-disc list-inside text-cyan-300">
-                        {detections.map((item, index) => (
+                        {/* {detections.map((item, index) => (
                           <li key={index}>{renderDetLabel(item)}</li>
-                        ))}
+                        ))} */}
+
+                        <li>{renderDetLabel(detections[0])}</li>
                       </ul>
                     ) : (
                       <p className="text-white/50 text-sm">Belum ada objek terdeteksi.</p>
