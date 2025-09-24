@@ -207,7 +207,7 @@ const ReportPage = () => {
 
       // Gemini result
       // const aiDescription = data.description || '';
-      const aiDescription = formatResponseFromAI(data);
+      const aiDescription = formatResponseFromAI(data.description);
       // const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
 
       setDescription(aiDescription.description);
