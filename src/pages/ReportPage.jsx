@@ -249,16 +249,19 @@ const ReportPage = () => {
 
       const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
 
+      const formattedDescription = description + " " + damageLevel;
+
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description, // deskripsi sudah memuat "Tingkat kerusakan: ..."
+        description: formattedDescription,
+        // description, // deskripsi sudah memuat "Tingkat kerusakan: ..."
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        damage_level: damageLevel,
+        // damage_level: damageLevel,
       });
       if (insertError) throw insertError;
 
