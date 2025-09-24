@@ -35,6 +35,26 @@ const parseDamageFromText = (text = '') => {
   return 'Tidak diketahui';
 };
 
+const formatResponseFromAI = (text) => {
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+
+    if (!match) {
+      throw new Error("JSON tidak ditemukan dalam response");
+    }
+
+    const data = JSON.parse(match[0]);
+
+    // Ambil value description dan damage_level
+    const description = data.description || null;
+    const damageLevel = data.damage_level || null;
+
+    return { description, damageLevel };
+  } catch {
+    return null;
+  }
+}
+
 const ReportPage = () => {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
@@ -180,11 +200,13 @@ const ReportPage = () => {
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
       // Gemini result
-      const aiDescription = data.description || '';
-      const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
+      // const aiDescription = data.description || '';
+      const aiDescription = formatResponseFromAI(data);
+      // const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
 
-      setDescription(aiDescription);
-      setDamageLevel(aiLevel);
+      setDescription(aiDescription.description);
+      // setDamageLevel(aiLevel);
+      setDamageLevel(aiDescription.damageLevel);
       setDamageBasis(`AI mengategorikan sebagai ${aiLevel}.`);
 
       if (aiLevel === 'Tidak ada kerusakan') {
