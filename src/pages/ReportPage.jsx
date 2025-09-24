@@ -45,6 +45,8 @@ const formatResponseFromAI = (text) => {
 
     console.log("text", text);
 
+    console.log('jsonParse', jsonParse);
+
     // const data = JSON.parse(match[0]);
 
     const plainMatch = jsonParse[0].match(/^(.*?)(?:\s*Tingkat kerusakan:\s*(\w+))$/i);
@@ -56,9 +58,9 @@ const formatResponseFromAI = (text) => {
       return { description, damageLevel };
     }
 
-    throw new Error('Format dari AI tidak dikenali');
+    console.log('data', data);
 
-    // console.log('data', data);
+    throw new Error('Format dari AI tidak dikenali');
 
     // // Ambil value description dan damage_level
     // const description = data.description || null;
