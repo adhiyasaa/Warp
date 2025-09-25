@@ -7,6 +7,7 @@ import useProfile from '../hooks/useProfile';
 import Navbar from '../components/Navbar';
 import { motion } from 'framer-motion';
 import MapPicker from '../components/MapPicker';
+import TutorialModal from '../components/TutorialModal';
 
 const labelDictionary = {
   Jalan: 'Jalan Rusak / Berlubang',
@@ -70,7 +71,7 @@ const ReportPage = () => {
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-
+  const [isTutorialOpen, setIsTutorialOpen] = useState(true);
   const [location, setLocation] = useState(null);
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
 
@@ -282,14 +283,17 @@ const ReportPage = () => {
     return labelDictionary[raw] || String(raw);
   };
 
-  return (
-    <div
-      className="min-h-screen bg-cover bg-center bg-fixed text-white"
-      style={{ backgroundImage: "url('/images/background.png')" }}
-    >
-      <div className="min-h-screen bg-black/50 backdrop-blur-sm">
-        <Navbar />
-        <div className="container mx-auto px-4 pt-28 pb-16">
+    return (
+        <div 
+            className="min-h-screen bg-cover bg-center bg-fixed text-white" 
+            style={{ backgroundImage: "url('/images/background.png')" }}
+        >
+            {/* 3. Render tutorial*/}
+            <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
+
+            <div className="min-h-screen bg-black/50 backdrop-blur-sm">
+                <Navbar />
+                <div className="container mx-auto px-4 pt-28 pb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
