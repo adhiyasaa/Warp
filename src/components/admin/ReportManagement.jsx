@@ -1,4 +1,3 @@
-// src/components/admin/ReportManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { motion } from 'framer-motion';
@@ -8,6 +7,16 @@ const statusColors = {
   'Diproses': 'bg-blue-100 text-blue-800',
   'Selesai': 'bg-green-100 text-green-800'
 };
+
+// Objek untuk warna tingkat kerusakan
+const damageLevelColors = {
+    'Ringan': 'bg-green-100 text-green-800',
+    'Sedang': 'bg-yellow-100 text-yellow-800',
+    'Berat': 'bg-red-100 text-red-800',
+    'Tidak ada kerusakan': 'bg-gray-100 text-gray-800',
+    'Tidak diketahui': 'bg-gray-100 text-gray-800'
+};
+
 
 const ReportManagement = () => {
     const [reports, setReports] = useState([]);
@@ -108,7 +117,7 @@ const ReportManagement = () => {
                                     <select 
                                         value={report.damage_level || 'Tidak diketahui'} 
                                         onChange={(e) => handleFieldChange(report.id, 'damage_level', e.target.value)}
-                                        className={`p-2 rounded-md text-sm font-medium border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${statusColors[report.status] || 'bg-gray-100 text-gray-800'}`}
+                                        className={`p-2 rounded-md text-sm font-medium border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${damageLevelColors[report.damage_level || 'Tidak diketahui'] || 'bg-gray-100 text-gray-800'}`}
                                     >
                                         <option value="Tidak diketahui">Tidak diketahui</option>
                                         <option value="Ringan">Ringan</option>
