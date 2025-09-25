@@ -12,7 +12,8 @@ const UserManagement = () => {
     const fetchProfiles = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase.from('profiles').select('*').order('username');
+            // Panggil fungsi RPC yang sudah kita buat
+            const { data, error } = await supabase.rpc('get_users_with_details');
             if (error) throw error;
             setProfiles(data);
         } catch (error) {
@@ -43,17 +44,20 @@ const UserManagement = () => {
         } else {
             alert('Profil berhasil diupdate!');
             setIsModalOpen(false);
-            fetchProfiles();
+            fetchProfiles(); // Muat ulang data setelah update
         }
     };
 
     const handleDeleteUser = async (profileId) => {
         if (window.confirm('Apakah Anda yakin ingin menghapus profil pengguna ini? Ini tidak bisa dibatalkan.')) {
+            // Catatan: Menghapus dari tabel 'profiles' tidak menghapus user dari 'auth.users'
+            // Untuk penghapusan penuh, diperlukan fungsi edge Supabase.
+            // Untuk saat ini, kita hanya hapus profilnya.
             const { error } = await supabase.from('profiles').delete().eq('id', profileId);
             if (error) {
                 alert('Gagal menghapus profil: ' + error.message);
             } else {
-                fetchProfiles();
+                fetchProfiles(); // Muat ulang data
             }
         }
     };
@@ -68,7 +72,7 @@ const UserManagement = () => {
 
     return (
         <>
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
@@ -80,12 +84,12 @@ const UserManagement = () => {
                         Total: {profiles.length} Pengguna
                     </div>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengguna</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User ID</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
@@ -93,7 +97,7 @@ const UserManagement = () => {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {profiles.map((profile) => (
-                                <motion.tr 
+                                <motion.tr
                                     key={profile.id}
                                     whileHover={{ backgroundColor: 'rgba(243, 244, 246, 0.5)' }}
                                     className="transition-colors"
@@ -105,6 +109,8 @@ const UserManagement = () => {
                                             </div>
                                             <div className="ml-4">
                                                 <div className="text-sm font-medium text-gray-900">{profile.username}</div>
+                                                {/* MENAMPILKAN EMAIL DI SINI */}
+                                                <div className="text-sm text-gray-500">{profile.email}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -115,17 +121,17 @@ const UserManagement = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{profile.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                        <motion.button 
+                                        <motion.button
                                             onClick={() => handleEditClick(profile)}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             className="text-indigo-600 hover:text-indigo-800 p-2 rounded-full hover:bg-indigo-50"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
+                                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                           </svg>
                                         </motion.button>
-                                        <motion.button 
+                                        <motion.button
                                             onClick={() => handleDeleteUser(profile.id)}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
@@ -141,39 +147,39 @@ const UserManagement = () => {
                         </tbody>
                     </table>
                 </div>
-                
-                {/* Stats Card */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <div className="text-blue-800 font-medium">Admin</div>
-                        <div className="text-2xl font-bold text-blue-600">
-                            {profiles.filter(p => p.role === 'admin').length}
-                        </div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                        <div className="text-green-800 font-medium">User Biasa</div>
-                        <div className="text-2xl font-bold text-green-600">
+
+                 {/* Stats Card */}
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                         <div className="text-blue-800 font-medium">Admin</div>
+                         <div className="text-2xl font-bold text-blue-600">
+                             {profiles.filter(p => p.role === 'admin').length}
+                         </div>
+                     </div>
+                     <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                         <div className="text-green-800 font-medium">User Biasa</div>
+                         <div className="text-2xl font-bold text-green-600">
                             {profiles.filter(p => p.role === 'user').length}
-                        </div>
-                    </div>
-                </div>
+                         </div>
+                     </div>
+                 </div>
             </motion.div>
 
             {/* Modal Edit */}
             {isModalOpen && editingProfile && (
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
                 >
-                    <motion.div 
+                    <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-2xl font-bold text-gray-800">Edit Profil Pengguna</h3>
-                            <button 
+                            <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="text-gray-400 hover:text-gray-600"
                             >
@@ -182,11 +188,21 @@ const UserManagement = () => {
                                 </svg>
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleUpdateUser}>
+                            {/* Menampilkan Email (Read-only) */}
+                            <div className="mb-4">
+                                <label className="block text-gray-700 font-medium mb-2">Email</label>
+                                <input
+                                    type="email"
+                                    value={editingProfile.email}
+                                    disabled // Tidak bisa diedit
+                                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                                />
+                            </div>
                             <div className="mb-4">
                                 <label className="block text-gray-700 font-medium mb-2">Username</label>
-                                <input 
+                                <input
                                     type="text"
                                     value={editingProfile.username}
                                     onChange={(e) => setEditingProfile({ ...editingProfile, username: e.target.value })}
@@ -195,7 +211,7 @@ const UserManagement = () => {
                             </div>
                             <div className="mb-6">
                                 <label className="block text-gray-700 font-medium mb-2">Role</label>
-                                <select 
+                                <select
                                     value={editingProfile.role}
                                     onChange={(e) => setEditingProfile({ ...editingProfile, role: e.target.value })}
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -205,8 +221,8 @@ const UserManagement = () => {
                                 </select>
                             </div>
                             <div className="flex justify-end space-x-4">
-                                <motion.button 
-                                    type="button" 
+                                <motion.button
+                                    type="button"
                                     onClick={() => setIsModalOpen(false)}
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
@@ -214,7 +230,7 @@ const UserManagement = () => {
                                 >
                                     Batal
                                 </motion.button>
-                                <motion.button 
+                                <motion.button
                                     type="submit"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
