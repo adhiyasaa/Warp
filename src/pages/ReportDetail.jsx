@@ -6,6 +6,21 @@ import Navbar from '../components/Navbar';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
+const separateDescriptionAndDamageLevel = (text) => {
+    const s = String(text).trim();
+
+    const re = /^(.*?)(?:\s*Tingkat\s*Kerusakan\s*:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+))\s*\.?\s*$/i;
+    const m = s.match(re);
+
+    if (m) {
+        const description = m[1].trim().replace(/\s+/g, ' ');
+        const damageLevel = m[2].trim();
+        return { description, damageLevel };
+    }
+
+    return { description: s, damageLevel: null};
+};
+
 const ReportDetail = () => {
     const { id } = useParams();
     const [report, setReport] = useState(null);
@@ -52,6 +67,8 @@ const ReportDetail = () => {
     
     const position = [report.latitude, report.longitude];
 
+    const leftSectionText = separateDescriptionAndDamageLevel(report.description);
+
     return (
         <div className="bg-gray-100 min-h-screen">
             {/* Pastikan Navbar dirender agar z-index nya tetap bekerja */}
@@ -69,10 +86,14 @@ const ReportDetail = () => {
                             <div className="space-y-6">
                                 <div>
                                     <h2 className="text-xl font-semibold text-gray-700 mb-2 border-b pb-2">Deskripsi Laporan</h2>
-                                    <p className="text-gray-600 leading-relaxed">{report.description || "Tidak ada deskripsi."}</p>
+                                    <p className="text-gray-600 leading-relaxed">{leftSectionText.description || "Tidak ada deskripsi."}</p>
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-semibold text-gray-700 mb-3">Status</h2>
+                                    <h2 className="text-xl font-semibold text-gray-700 mb-2 border-b pb-2">Tingkat Kerusakan</h2>
+                                    <p className="text-gray-600 leading-relaxed">{leftSectionText.damageLevel || "Tidak ada data tingkat kerusakan."}</p>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Status</h2>
                                     <div className="flex items-center space-x-4">
                                         <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
                                             report.status === 'Selesai' ? 'bg-green-200 text-green-800' :

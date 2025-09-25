@@ -35,6 +35,36 @@ const parseDamageFromText = (text = '') => {
   return 'Tidak diketahui';
 };
 
+const formatResponseFromAI = (text) => {
+  const s = String(text);
+
+  try {
+    const jsonMatch = s.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("JSON tidak ditemukan dalam response");
+    }
+
+    const data = JSON.parse(jsonMatch[0]);
+
+    let description = typeof data.description === "string" ? data.description.trim() : "";
+    const damageLevel = typeof data.damage_level === "string" ? data.damage_level.trim() : null;
+
+    description = description.replace(/\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+)\.?\s*$/i, "").trim();
+
+    return { description, damageLevel };
+  } catch (e) {
+    const m = s.match(/^(.*?)(?:\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+))[\.\s]*$/is);
+
+    if (m) {
+      return { description: m[1].trim(), damageLevel: m[2].trim() };
+    }
+
+    console.error("Gagal parsing response dari AI:", e);
+    return null;
+  }
+};
+
+
 const ReportPage = () => {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
@@ -180,14 +210,16 @@ const ReportPage = () => {
       setDetections(Array.isArray(data.detections) ? data.detections : []);
 
       // Gemini result
-      const aiDescription = data.description || '';
-      const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
+      // const aiDescription = data.description || '';
+      const aiDescription = formatResponseFromAI(data.description);
+      // const aiLevel = data.damage_level || parseDamageFromText(aiDescription) || 'Tidak diketahui';
 
-      setDescription(aiDescription);
-      setDamageLevel(aiLevel);
-      setDamageBasis(`AI mengategorikan sebagai ${aiLevel}.`);
+      setDescription(aiDescription.description);
+      // setDamageLevel(aiLevel);
+      setDamageLevel(aiDescription.damageLevel);
+      setDamageBasis(`AI mengategorikan sebagai ${aiDescription.damageLevel}.`);
 
-      if (aiLevel === 'Tidak ada kerusakan') {
+      if (aiDescription.damageLevel === 'Tidak ada kerusakan') {
         setDetections([]);
       }
     } catch (err) {
@@ -217,16 +249,19 @@ const ReportPage = () => {
 
       const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
 
+      const formattedDescription = description + " Tingkat Kerusakan: " + damageLevel;
+
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description, // deskripsi sudah memuat "Tingkat kerusakan: ..."
+        description: formattedDescription,
+        // description, // deskripsi sudah memuat "Tingkat kerusakan: ..."
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        damage_level: damageLevel,
+        // damage_level: damageLevel,
       });
       if (insertError) throw insertError;
 
@@ -389,9 +424,11 @@ const ReportPage = () => {
                     <div className="h-px bg-white/10 my-2" />
                     {detections.length > 0 ? (
                       <ul className="list-disc list-inside text-cyan-300">
-                        {detections.map((item, index) => (
+                        {/* {detections.map((item, index) => (
                           <li key={index}>{renderDetLabel(item)}</li>
-                        ))}
+                        ))} */}
+
+                        <li>{renderDetLabel(detections[0])}</li>
                       </ul>
                     ) : (
                       <p className="text-white/50 text-sm">Belum ada objek terdeteksi.</p>
