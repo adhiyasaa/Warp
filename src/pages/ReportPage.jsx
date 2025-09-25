@@ -262,7 +262,7 @@ const ReportPage = () => {
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        // damage_level: damageLevel,
+        damage_level: damageLevel,
       });
       if (insertError) throw insertError;
 
