@@ -79,7 +79,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
 
     // --- Panggil Gemini ---
     if (!genAI) throw new Error("Klien Gemini tidak terinisialisasi.");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const imagePart = await fileToGenerativePart(req.file);
 
     const prompt = `
