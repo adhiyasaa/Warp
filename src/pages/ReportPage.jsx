@@ -19,33 +19,21 @@ const labelDictionary = {
 
 const formatResponseFromAI = (text) => {
   const s = String(text);
-
   try {
     const jsonMatch = s.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("JSON tidak ditemukan dalam response");
-    }
-
+    if (!jsonMatch) throw new Error("JSON tidak ditemukan dalam response");
     const data = JSON.parse(jsonMatch[0]);
-
     let description = typeof data.description === "string" ? data.description.trim() : "";
     const damageLevel = typeof data.damage_level === "string" ? data.damage_level.trim() : null;
-
     description = description.replace(/\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+)\.?\s*$/i, "").trim();
-
     return { description, damageLevel };
   } catch (e) {
     const m = s.match(/^(.*?)(?:\s*Tingkat kerusakan:\s*([A-Za-zÀ-ÖØ-öø-ÿ\s-]+))[\.\s]*$/is);
-
-    if (m) {
-      return { description: m[1].trim(), damageLevel: m[2].trim() };
-    }
-
+    if (m) return { description: m[1].trim(), damageLevel: m[2].trim() };
     console.error("Gagal parsing response dari AI:", e);
     return null;
   }
 };
-
 
 const ReportPage = () => {
   const [title, setTitle] = useState('');
@@ -55,16 +43,13 @@ const ReportPage = () => {
   const [isTutorialOpen, setIsTutorialOpen] = useState(true);
   const [location, setLocation] = useState(null);
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
-
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
   const [description, setDescription] = useState('');
   const [detections, setDetections] = useState([]);
   const [damageLevel, setDamageLevel] = useState('');
   const [damageBasis, setDamageBasis] = useState('');
-
   const { currentUser } = useAuth();
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
@@ -86,28 +71,23 @@ const ReportPage = () => {
       setError('Ukuran file maksimal 5MB.');
       return;
     }
-
     setImage(file);
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
     await loadImageDimension(previewUrl);
-
     setIsAnalyzing(true);
     setDetections([]);
     setDescription('');
-    setError(''); // Hapus error lama
+    setError('');
     setDamageLevel('');
     setDamageBasis('');
-
     const formData = new FormData();
     formData.append('image', file);
-
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
         method: 'POST',
         body: formData,
       });
-
       if (!response.ok) {
         let msg = 'Analisis gagal, pastikan backend AI berjalan.';
         try {
@@ -116,17 +96,13 @@ const ReportPage = () => {
         } catch (_) {}
         throw new Error(msg);
       }
-
       const data = await response.json();
       const aiResponse = formatResponseFromAI(data.description);
-      
       const detectedObjects = Array.isArray(data.detections) ? data.detections : [];
       const damageFound = aiResponse?.damageLevel !== 'Tidak ada kerusakan' && detectedObjects.length > 0;
-
-      // PENAMBAHAN: Logika validasi gambar
       if (!damageFound) {
-        setError("Gambar tidak sesuai konteks atau tidak ada kerusakan yang terdeteksi. Laporan tidak dapat dikirim.");
-        setDamageLevel('Tidak ada kerusakan'); // Set state untuk menonaktifkan tombol
+        setError("Gambar tidak valid atau tidak ada kerusakan terdeteksi. Silakan ambil ulang gambar.");
+        setDamageLevel('Tidak ada kerusakan');
         setDetections([]);
       } else {
         setDetections(detectedObjects);
@@ -134,7 +110,6 @@ const ReportPage = () => {
         setDamageLevel(aiResponse.damageLevel);
         setDamageBasis(`AI mengategorikan sebagai ${aiResponse.damageLevel}.`);
       }
-
     } catch (err) {
       console.error(err);
       setError('Error: ' + err.message);
@@ -147,40 +122,37 @@ const ReportPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !image || !location) {
-      setError('Judul, dokumentasi, dan lokasi di peta wajib diisi.');
-      return;
-    }
     
-    // PENAMBAHAN: Validasi final sebelum submit
-    if (damageLevel === 'Tidak ada kerusakan' || detections.length === 0) {
-        setError('Laporan tidak dapat dikirim karena tidak ada kerusakan yang terdeteksi pada gambar.');
+    // PENAMBAHAN: Logika pop-up saat tombol diklik
+    if (damageLevel === 'Tidak ada kerusakan' || (image && detections.length === 0)) {
+        window.alert('Gambar tidak valid atau tidak ada kerusakan terdeteksi.\nSilakan unggah ulang foto yang sesuai.');
         return;
     }
-
-    setIsLoading(true);
+    
+    if (!title || !image || !location) {
+        window.alert('Harap lengkapi semua kolom yang wajib diisi:\n- Judul Laporan\n- Unggah Foto\n- Pilih Lokasi di Peta');
+        return;
+    }
+    
     setError('');
-
+    setIsLoading(true);
     try {
       const filePath = `public/${currentUser.id}_${Date.now()}_${image.name}`;
       const { error: uploadError } = await supabase.storage.from('reports').upload(filePath, image);
       if (uploadError) throw uploadError;
-
       const { data: urlData } = supabase.storage.from('reports').getPublicUrl(filePath);
-
       const { error: insertError } = await supabase.from('reports').insert({
         title,
-        description: description, // Menggunakan deskripsi bersih dari AI
+        description: description,
         event_date: eventDate,
         image_url: urlData.publicUrl,
         user_id: currentUser.id,
         username: profile.username,
         latitude: location.lat,
         longitude: location.lng,
-        damage_level: damageLevel, // Menyimpan tingkat kerusakan di kolomnya
+        damage_level: damageLevel,
       });
       if (insertError) throw insertError;
-
       navigate('/laporan-saya');
     } catch (err) {
       setError('Gagal mengirim laporan. Pastikan semua data benar.');
@@ -198,13 +170,15 @@ const ReportPage = () => {
     return labelDictionary[raw] || String(raw);
   };
 
-  // Fungsi untuk menentukan teks pada tombol submit
   const getButtonText = () => {
     if (isLoading) return 'Mengirim...';
     if (isAnalyzing) return 'Menunggu Analisis AI...';
     if (damageLevel === 'Tidak ada kerusakan') return 'Gambar Tidak Valid';
     return 'Kirim Laporan';
   };
+  
+  // PENAMBAHAN: Variabel untuk menonaktifkan tombol
+  const isSubmitDisabled = isLoading || isAnalyzing || damageLevel === 'Tidak ada kerusakan' || !title || !image || !location;
 
   return (
     <div 
@@ -295,28 +269,13 @@ const ReportPage = () => {
                                     <img src={imagePreview} alt="Preview" className="max-h-48 rounded-md" />
                                 ) : (
                                     <div className="text-center">
-                                        <svg
-                                            className="mx-auto h-12 w-12 text-white/50"
-                                            stroke="currentColor"
-                                            fill="none"
-                                            viewBox="0 0 48 48"
-                                        >
-                                            <path
-                                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
+                                        <svg className="mx-auto h-12 w-12 text-white/50" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                         <p className="mt-2 text-sm text-white/70">Klik untuk upload atau drag and drop</p>
                                     </div>
                                 )}
                             </div>
-                            {imageSize.width > 0 && (
-                                <p className="text-white/40 text-xs mt-2">
-                                    Dimensi gambar: {imageSize.width}×{imageSize.height}px
-                                </p>
-                            )}
                         </div>
 
                         <div>
@@ -363,7 +322,7 @@ const ReportPage = () => {
 
                         <button
                             type="submit"
-                            disabled={isLoading || isAnalyzing || damageLevel === 'Tidak ada kerusakan'}
+                            disabled={isSubmitDisabled}
                             className="w-full p-3 bg-gradient-to-r from-cyan-500 to-teal-500 text-white rounded-lg font-bold hover:from-cyan-600 hover:to-teal-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {getButtonText()}
