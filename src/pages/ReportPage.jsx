@@ -39,7 +39,6 @@ const ReportPage = () => {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isTutorialOpen, setIsTutorialOpen] = useState(true);
   const [location, setLocation] = useState(null);
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
@@ -54,18 +53,9 @@ const ReportPage = () => {
   const { profile } = useProfile(currentUser?.id);
   const navigate = useNavigate();
 
-  const loadImageDimension = (objectUrl) =>
-    new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = () => resolve({ width: 0, height: 0 });
-      img.src = objectUrl;
-    });
-
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const FIVE_MB = 5 * 1024 * 1024;
     if (file.size > FIVE_MB) {
       setError('Ukuran file maksimal 5MB.');
@@ -74,7 +64,6 @@ const ReportPage = () => {
     setImage(file);
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
-    await loadImageDimension(previewUrl);
     setIsAnalyzing(true);
     setDetections([]);
     setDescription('');
@@ -99,7 +88,7 @@ const ReportPage = () => {
       const data = await response.json();
       const aiResponse = formatResponseFromAI(data.description);
       const detectedObjects = Array.isArray(data.detections) ? data.detections : [];
-      const damageFound = aiResponse?.damageLevel !== 'Tidak ada kerusakan' && detectedObjects.length > 0;
+      const damageFound = aiResponse?.damageLevel && aiResponse.damageLevel !== 'Tidak ada kerusakan' && detectedObjects.length > 0;
       if (!damageFound) {
         setError("Gambar tidak valid atau tidak ada kerusakan terdeteksi. Silakan ambil ulang gambar.");
         setDamageLevel('Tidak ada kerusakan');
@@ -122,15 +111,9 @@ const ReportPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // PENAMBAHAN: Logika pop-up saat tombol diklik
-    if (damageLevel === 'Tidak ada kerusakan' || (image && detections.length === 0)) {
-        window.alert('Gambar tidak valid atau tidak ada kerusakan terdeteksi.\nSilakan unggah ulang foto yang sesuai.');
-        return;
-    }
-    
-    if (!title || !image || !location) {
-        window.alert('Harap lengkapi semua kolom yang wajib diisi:\n- Judul Laporan\n- Unggah Foto\n- Pilih Lokasi di Peta');
+    // Validasi ulang saat submit untuk keamanan, meskipun tombol seharusnya sudah nonaktif
+    if (!title || !image || !location || !damageLevel || damageLevel === 'Tidak ada kerusakan') {
+        window.alert('Harap lengkapi semua data dan pastikan gambar yang diunggah valid.');
         return;
     }
     
@@ -177,8 +160,15 @@ const ReportPage = () => {
     return 'Kirim Laporan';
   };
   
-  // PENAMBAHAN: Variabel untuk menonaktifkan tombol
-  const isSubmitDisabled = isLoading || isAnalyzing || damageLevel === 'Tidak ada kerusakan' || !title || !image || !location;
+  // PERUBAHAN KUNCI: Logika untuk menonaktifkan tombol diperketat
+  const isSubmitDisabled = 
+    isLoading || 
+    isAnalyzing || 
+    !title || 
+    !image || 
+    !location ||
+    !damageLevel || // Pastikan damageLevel tidak kosong
+    damageLevel === 'Tidak ada kerusakan';
 
   return (
     <div 
