@@ -67,4 +67,4 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
 
 app.listen(port, () => {
     console.log(`🚀 Server backend utama berjalan di http://localhost:${port}`);
-});
+});     
