@@ -50,7 +50,7 @@ app.post('/api/analyze', upload.single('image'), async (req, res) => {
         console.log("Hasil deteksi dari YOLO:", detectedLabels);
 
         // Minta deskripsi dari Gemini
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const imagePart = await fileToGenerativePart(req.file);
         const prompt = "Anda adalah AI yang membantu melaporkan kerusakan fasilitas umum. Jelaskan kerusakan yang terlihat di gambar ini dalam satu kalimat singkat dan jelas.";
         const result = await model.generateContent([prompt, imagePart]);
